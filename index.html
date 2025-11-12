@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>목동유쌤영어학원 단어 테스트 학습기</title>
+    <title>목동유쌤영어학원 단어 테스트지 생성기</title>
+    <!-- Tailwind CSS CDN을 로드합니다. -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Nanum+Gothic:wght@400;700&display=swap');
@@ -35,36 +36,86 @@
             border-color: #4f46e5;
             box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.5);
         }
-        /* 메시지 모달 스타일 */
-        #messageModal > div {
-            animation: fadeInScale 0.3s ease-out;
+        
+        /* 테스트지 출력 관련 스타일 */
+        #printScreen {
+            padding: 2rem;
         }
-        @keyframes fadeInScale {
-            from { opacity: 0; transform: scale(0.9); }
-            to { opacity: 1; transform: scale(1); }
+        .word-row {
+            display: grid;
+            grid-template-columns: 2fr 3fr; /* 단어 2, 뜻 3 비율 */
+            gap: 1rem;
+            padding: 0.75rem 0;
+            border-bottom: 1px dashed #e0e0e0;
+        }
+        .word-cell, .meaning-cell {
+            font-size: 1rem;
+            color: #1f2937;
+        }
+        .meaning-cell.hidden-meaning {
+            color: transparent;
+            background-color: #e5e7eb; /* 가려진 텍스트를 위한 배경 */
+            border-radius: 0.25rem;
+            padding: 0 0.5rem;
+            min-height: 1.5rem; /* 빈 공간 확보 */
+            display: block;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* 인쇄 시 레이아웃 조정 */
+        @media print {
+            body { 
+                background-color: white; 
+                margin: 0;
+            }
+            #app { 
+                max-width: 100%;
+                box-shadow: none; 
+                margin: 0;
+            }
+            .header-controls, .non-print {
+                display: none !important; /* 설정, 버튼 숨기기 */
+            }
+            #printScreen {
+                padding: 0; 
+            }
+            .word-row {
+                padding: 0.5rem 0;
+                border-bottom: 1px solid #ccc; /* 인쇄 시 진한 실선 */
+                page-break-inside: avoid; /* 행 잘림 방지 */
+            }
+            .meaning-cell.hidden-meaning {
+                background-color: #fff; /* 인쇄 시 배경 제거 */
+                border: 1px solid #000;
+                color: transparent; /* 텍스트는 여전히 숨김 */
+            }
         }
     </style>
 </head>
-<body class="p-4 sm:p-8 flex justify-center items-center min-h-screen">
+<body class="flex justify-center items-start min-h-screen">
 
-    <div id="app" class="w-full max-w-xl">
-        <!-- 학원 로고/문구 -->
-        <header class="text-center mb-6">
-            <h1 class="text-3xl font-bold text-gray-800">목동유쌤영어학원</h1>
-            <p class="text-xl font-semibold text-indigo-600 mt-1">단어 테스트 학습기</p>
-            <p id="loadStatusMessage" class="text-sm font-bold text-gray-500 mt-2">데이터 로딩 중...</p>
-        </header>
+    <div id="app" class="w-full max-w-4xl pt-8 pb-8">
+        
+        <!-- 컨트롤 및 상태 메시지 (인쇄 시 숨김) -->
+        <div class="header-controls px-4 sm:px-0">
+            <header class="text-center mb-6">
+                <h1 class="text-3xl font-bold text-gray-800">목동유쌤영어학원</h1>
+                <p class="text-xl font-semibold text-indigo-600 mt-1">단어 테스트지 생성기</p>
+                <p id="loadStatusMessage" class="text-sm font-bold text-gray-500 mt-2">데이터 로딩 중...</p>
+            </header>
+        </div>
 
         <!-- 1. 세팅 화면 -->
-        <div id="setupScreen" class="card p-6">
-            <h2 class="text-2xl font-semibold text-gray-700 mb-4 border-b pb-2">테스트 설정</h2>
+        <div id="setupScreen" class="card p-6 header-controls">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-4 border-b pb-2">테스트지 필터 설정</h2>
             
             <div id="filterOptions" class="space-y-4">
                 <!-- 챕터 필터 -->
                 <div>
                     <label for="chapterFilter" class="block text-sm font-medium text-gray-700 mb-1">Chapter 선택:</label>
                     <select id="chapterFilter" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                        <!-- 옵션은 JavaScript로 채워집니다 -->
                         <option value="all">전체 Chapter</option>
                     </select>
                 </div>
@@ -73,7 +124,6 @@
                 <div>
                     <label for="typeFilter" class="block text-sm font-medium text-gray-700 mb-1">단어 유형 선택:</label>
                     <select id="typeFilter" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                        <!-- 옵션은 JavaScript로 채워집니다 -->
                         <option value="all">전체 유형</option>
                     </select>
                 </div>
@@ -85,61 +135,66 @@
             </div>
 
             <button
-                id="startTestBtn"
+                id="generateTestBtn"
                 class="w-full text-white font-bold py-3 px-6 rounded-lg btn-primary mt-6 disabled:opacity-50 disabled:shadow-none disabled:top-0"
-                onclick="startTest()"
+                onclick="generateTestPaper()"
                 disabled
             >
-                테스트 시작
+                테스트지 생성 및 출력 화면으로 이동
             </button>
         </div>
 
-        <!-- 2. 테스트 화면 -->
-        <div id="testScreen" class="card p-6 hidden">
-            <h2 class="text-xl font-semibold mb-4 text-gray-700">단어 테스트 (<span id="progressText">0/0</span>)</h2>
-
-            <!-- 현재 단어 표시 -->
-            <div id="wordDisplay" class="text-center bg-gray-100 p-6 rounded-xl mb-6 border-b-4 border-gray-300">
-                <div class="text-sm font-medium text-gray-500">단어</div>
-                <div id="currentWord" class="text-4xl font-extrabold text-indigo-700 mt-1"></div>
-                <div id="wordContext" class="text-xs text-gray-400 mt-2"></div>
-            </div>
-
-            <!-- 사용자 입력 및 결과 -->
-            <input
-                type="text"
-                id="userAnswer"
-                class="w-full p-4 border-2 border-indigo-300 rounded-lg text-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-indigo-200 mb-4 input-focus"
-                placeholder="여기에 뜻을 입력하세요 (Enter 키로 확인)"
-                onkeypress="if(event.key === 'Enter') checkAnswer()"
-                autocomplete="off"
-            />
-
-            <div class="flex gap-4">
-                 <button
-                    id="checkBtn"
-                    class="w-1/2 text-white font-bold py-3 px-6 rounded-lg btn-primary"
-                    onclick="checkAnswer()"
+        <!-- 2. 출력 화면 (테스트지) -->
+        <div id="printScreen" class="card hidden p-6">
+            
+            <!-- 출력 화면 제어 버튼 (인쇄 시 숨김) -->
+            <div class="non-print mb-4 flex justify-between items-center">
+                <button
+                    class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                    onclick="switchScreen('setup')"
                 >
-                    정답 확인
+                    &larr; 설정으로 돌아가기
                 </button>
                 <button
-                    id="skipBtn"
-                    class="w-1/2 bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-6 rounded-lg transition-all duration-150 ease-in-out"
-                    onclick="skipWord()"
+                    id="toggleMeaningBtn"
+                    class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                    onclick="toggleMeaningVisibility()"
                 >
-                    건너뛰기 (정답 공개)
+                    뜻 가리기 (정답지 전환)
+                </button>
+                <button
+                    class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                    onclick="window.print()"
+                >
+                    테스트지 인쇄 🖨️
                 </button>
             </div>
             
-            <button
-                class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-lg transition-colors duration-150 mt-4"
-                onclick="endTest()"
-            >
-                테스트 종료 및 설정 화면으로
-            </button>
+            <!-- 테스트지 헤더 (인쇄 포함) -->
+            <div id="testPaperHeader" class="mb-6 text-center border-b-2 border-gray-400 pb-4">
+                <h2 class="text-3xl font-extrabold text-gray-800">목동유쌤영어학원 단어 테스트지</h2>
+                <p class="text-lg font-medium text-gray-600 mt-1">
+                    <span id="testFilterSummary"></span>
+                </p>
+                <div class="flex justify-between mt-3 text-sm">
+                    <span>이름: _________________________</span>
+                    <span>날짜: _________________________</span>
+                    <span>총 단어 수: <span id="finalWordCount">0</span>개</span>
+                </div>
+            </div>
+
+            <!-- 단어 목록 출력 영역 -->
+            <div id="wordListContainer" class="space-y-1">
+                <!-- 단어 목록이 여기에 생성됩니다. -->
+                <div class="word-row font-bold border-b-2 border-gray-600 mb-2">
+                    <div class="word-cell">단어 (Word)</div>
+                    <div class="meaning-cell">뜻 (Meaning)</div>
+                </div>
+            </div>
+
+            <div class="h-20 non-print"></div> <!-- 하단 여백 -->
         </div>
-        
+
         <!-- 메시지 모달 (Alert 대체) -->
         <div id="messageModal" class="fixed inset-0 bg-gray-800 bg-opacity-75 hidden flex items-center justify-center p-4 z-50">
             <div class="card p-6 w-full max-w-sm text-center">
@@ -154,16 +209,14 @@
         // =========================
         // 설정 및 글로벌 변수
         // =========================
-        let fullVocabularyData = []; // CSV에서 로드된 전체 데이터
-        let currentTestSet = []; // 현재 테스트에 사용될 필터링된 데이터
-        let currentIndex = -1;
-        let currentWord = null;
+        let fullVocabularyData = []; 
+        let currentTestSet = []; 
 
         // ***** CSV 파일 이름 설정 *****
         const CSV_FILE_PATH = 'word.csv'; 
         // *****************************
 
-        // CSV 헤더 매핑 (사용자님의 파일 구조와 일치)
+        // CSV 헤더 매핑
         const HEADER_MAP = {
             CHAPTER: 'Chapter',
             TYPE: 'Type',
@@ -174,29 +227,28 @@
         // DOM 요소
         const loadStatusMessage = document.getElementById('loadStatusMessage');
         const setupScreen = document.getElementById('setupScreen');
-        const testScreen = document.getElementById('testScreen');
+        const printScreen = document.getElementById('printScreen');
         const chapterFilter = document.getElementById('chapterFilter');
         const typeFilter = document.getElementById('typeFilter');
         const wordCountDisplay = document.getElementById('wordCountDisplay');
-        const startTestBtn = document.getElementById('startTestBtn');
+        const generateTestBtn = document.getElementById('generateTestBtn');
+        const testFilterSummary = document.getElementById('testFilterSummary');
+        const wordListContainer = document.getElementById('wordListContainer');
+        const finalWordCount = document.getElementById('finalWordCount');
+        const toggleMeaningBtn = document.getElementById('toggleMeaningBtn');
         
-        const currentWordDiv = document.getElementById('currentWord');
-        const wordContextDiv = document.getElementById('wordContext');
-        const userAnswerInput = document.getElementById('userAnswer');
-        const progressText = document.getElementById('progressText');
-        
-        const modal = document.getElementById('messageModal');
-        const modalTitle = document.getElementById('modalTitle');
-        const modalBody = document.getElementById('modalBody');
+        let isMeaningHidden = true; // 뜻 가리기 초기 상태
 
         // =========================
         // 헬퍼 및 UI 함수
         // =========================
 
-        /**
-         * 간단한 모달을 표시합니다 (alert() 대체)
-         */
         function showModal(title, body, onClose = null) {
+            // ... (모달 함수는 이전 코드와 동일) ...
+            const modal = document.getElementById('messageModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalBody = document.getElementById('modalBody');
+
             modalTitle.textContent = title;
             modalBody.textContent = body;
             modal.classList.remove('hidden');
@@ -215,44 +267,32 @@
             modal.addEventListener('click', modalClickListener);
         }
 
-        /** 모달을 닫습니다. */
         function closeModal() {
-            modal.classList.add('hidden');
+            document.getElementById('messageModal').classList.add('hidden');
         }
 
-        /**
-         * 배열을 무작위로 섞습니다. (Fisher-Yates 알고리즘)
-         */
-        function shuffleArray(array) {
-            for (let i = array.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [array[i], array[j]] = [array[j], array[i]];
-            }
-        }
-        
-        /**
-         * 화면 전환 (Setup <-> Test)
-         */
         function switchScreen(screen) {
             setupScreen.classList.add('hidden');
-            testScreen.classList.add('hidden');
+            printScreen.classList.add('hidden');
             if (screen === 'setup') {
                 setupScreen.classList.remove('hidden');
-            } else if (screen === 'test') {
-                testScreen.classList.remove('hidden');
+            } else if (screen === 'print') {
+                printScreen.classList.remove('hidden');
             }
         }
         
-        /**
-         * 필터 드롭다운 옵션을 채웁니다.
-         */
         function populateFilters() {
             const chapters = new Set(fullVocabularyData.map(d => d[HEADER_MAP.CHAPTER]).filter(c => c));
             const types = new Set(fullVocabularyData.map(d => d[HEADER_MAP.TYPE]).filter(t => t));
 
             // Chapter 필터
             chapterFilter.innerHTML = '<option value="all">전체 Chapter</option>';
-            Array.from(chapters).sort((a, b) => parseInt(a) - parseInt(b)).forEach(chapter => {
+            Array.from(chapters).sort((a, b) => {
+                const numA = parseInt(a);
+                const numB = parseInt(b);
+                if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+                return String(a).localeCompare(String(b));
+            }).forEach(chapter => {
                 const option = document.createElement('option');
                 option.value = chapter;
                 option.textContent = `Chapter ${chapter}`;
@@ -268,15 +308,11 @@
                 typeFilter.appendChild(option);
             });
             
-            // 이벤트 리스너 추가
             chapterFilter.addEventListener('change', updateWordCount);
             typeFilter.addEventListener('change', updateWordCount);
             updateWordCount();
         }
 
-        /**
-         * 필터 설정에 따라 단어 개수를 업데이트하고 버튼 상태를 변경합니다.
-         */
         function updateWordCount() {
             const selectedChapter = chapterFilter.value;
             const selectedType = typeFilter.value;
@@ -289,11 +325,10 @@
 
             wordCountDisplay.textContent = currentTestSet.length;
             
-            // 단어 개수가 0이면 테스트 시작 버튼 비활성화
             if (currentTestSet.length > 0) {
-                startTestBtn.disabled = false;
+                generateTestBtn.disabled = false;
             } else {
-                startTestBtn.disabled = true;
+                generateTestBtn.disabled = true;
             }
         }
 
@@ -301,17 +336,14 @@
         // 데이터 처리 및 로드 로직
         // =========================
 
-        /**
-         * CSV 텍스트를 파싱하여 객체 배열로 변환합니다.
-         */
         function parseCSV(csvText) {
+            // ... (CSV 파싱 함수는 이전 코드와 동일) ...
             const lines = csvText.trim().split('\n');
             if (lines.length <= 1) return []; 
             
             const headers = lines[0].split(',').map(header => header.trim().replace(/"/g, ''));
             const data = [];
 
-            // 따옴표로 감싸진 필드 또는 쉼표가 아닌 필드를 찾음
             const csvRegex = /(".*?"|[^",\n]+)(?=\s*,|\s*$)/g; 
 
             for (let i = 1; i < lines.length; i++) {
@@ -334,7 +366,6 @@
                     row[key] = value.trim();
                 });
                 
-                // 유효한 단어/뜻 데이터만 사용
                 if (row[HEADER_MAP.WORD] && row[HEADER_MAP.MEANING]) {
                     data.push(row);
                 }
@@ -342,9 +373,6 @@
             return data;
         }
 
-        /**
-         * CSV 파일을 가져와 파싱하고 세팅 화면을 활성화합니다.
-         */
         async function loadData() {
             try {
                 loadStatusMessage.textContent = `데이터 로딩 중 (${CSV_FILE_PATH})...`;
@@ -361,7 +389,7 @@
                 if (fullVocabularyData.length === 0) {
                     loadStatusMessage.classList.add('text-red-500');
                     loadStatusMessage.textContent = '❌ 데이터 로드 실패: 유효한 단어 항목을 찾을 수 없습니다. (CSV 형식 확인)';
-                    startTestBtn.disabled = true;
+                    generateTestBtn.disabled = true;
                     return;
                 }
 
@@ -369,7 +397,6 @@
                 loadStatusMessage.classList.add('text-green-600');
                 loadStatusMessage.textContent = `✅ 총 ${fullVocabularyData.length}개의 단어를 성공적으로 불러왔습니다.`;
 
-                // 데이터 로드 완료 후 세팅 화면 준비
                 populateFilters();
                 switchScreen('setup');
 
@@ -378,115 +405,85 @@
                 loadStatusMessage.classList.remove('text-indigo-600');
                 loadStatusMessage.classList.add('text-red-500');
                 loadStatusMessage.textContent = `❌ 데이터 로드 실패: ${error.message}. (파일 위치 확인)`;
-                startTestBtn.disabled = true;
+                generateTestBtn.disabled = true;
             }
         }
 
         // =========================
-        // 테스트 로직
+        // 테스트지 생성 및 출력 로직
         // =========================
 
         /**
-         * 테스트를 시작하고 다음 단어를 표시합니다.
+         * 필터링된 단어 세트를 기반으로 테스트지 화면을 생성합니다.
          */
-        function startTest() {
+        function generateTestPaper() {
             if (currentTestSet.length === 0) {
                  showModal('오류', '선택된 단어가 없습니다. 필터 조건을 조정해주세요.');
                  return;
             }
-            
-            shuffleArray(currentTestSet); 
-            currentIndex = -1; 
-            userAnswerInput.value = '';
-            userAnswerInput.focus();
-            switchScreen('test');
-            nextWord();
-        }
 
-        /**
-         * 테스트를 종료하고 설정 화면으로 돌아갑니다.
-         */
-        function endTest() {
-            if (confirm('테스트를 종료하고 설정 화면으로 돌아가시겠습니까?')) {
-                switchScreen('setup');
-                userAnswerInput.style.borderColor = '#e5e7eb'; // 초기 색상으로 복구
-                currentTestSet = []; // 테스트 세트 초기화
-            }
+            // 1. 테스트지 상단 요약 업데이트
+            const chapterText = chapterFilter.value === 'all' ? '전체 Chapter' : `Chapter ${chapterFilter.value}`;
+            const typeText = typeFilter.value === 'all' ? '전체 유형' : `${typeFilter.value}`;
+            testFilterSummary.textContent = `(${chapterText}, ${typeText})`;
+            finalWordCount.textContent = currentTestSet.length;
+            
+            // 2. 단어 목록 HTML 생성
+            let listHtml = `
+                <div class="word-row font-bold border-b-2 border-gray-600 mb-2">
+                    <div class="word-cell">단어 (Word)</div>
+                    <div class="meaning-cell">뜻 (Meaning)</div>
+                </div>
+            `;
+            
+            currentTestSet.forEach((word, index) => {
+                const meaning = word[HEADER_MAP.MEANING].trim() || '뜻 없음';
+                // 뜻이 기본적으로 가려진 상태로 생성
+                const meaningClass = isMeaningHidden ? 'hidden-meaning' : '';
+                
+                listHtml += `
+                    <div class="word-row">
+                        <div class="word-cell">
+                            <span class="text-xs text-gray-400 mr-2">${index + 1}.</span>
+                            <span class="font-medium">${word[HEADER_MAP.WORD]}</span>
+                        </div>
+                        <div class="meaning-cell ${meaningClass}">
+                            ${meaning}
+                        </div>
+                    </div>
+                `;
+            });
+
+            wordListContainer.innerHTML = listHtml;
+            
+            // 3. 버튼 텍스트 초기화 및 화면 전환
+            isMeaningHidden = true;
+            toggleMeaningBtn.textContent = '뜻 가리기 (정답지 전환)';
+            switchScreen('print');
         }
         
         /**
-         * 다음 단어를 화면에 표시합니다.
+         * 뜻 셀의 가리기/보이기 상태를 전환합니다.
          */
-        function nextWord() {
-            currentIndex++;
+        function toggleMeaningVisibility() {
+            const meaningCells = document.querySelectorAll('#wordListContainer .meaning-cell');
+            isMeaningHidden = !isMeaningHidden;
             
-            if (currentIndex >= currentTestSet.length) {
-                showModal('테스트 완료! 🎊', `선택하신 ${currentTestSet.length}개의 단어 테스트를 마쳤습니다.`, () => {
-                    // 완료 후 설정 화면으로 돌아가거나, 재시작 로직 추가 가능
-                    switchScreen('setup');
-                });
-                return;
-            }
-
-            currentWord = currentTestSet[currentIndex];
-            currentWordDiv.textContent = currentWord[HEADER_MAP.WORD];
+            meaningCells.forEach(cell => {
+                if (isMeaningHidden) {
+                    cell.classList.add('hidden-meaning');
+                } else {
+                    cell.classList.remove('hidden-meaning');
+                }
+            });
             
-            // Chapter와 Type 정보를 context에 표시
-            const chapter = currentWord[HEADER_MAP.CHAPTER] ? `Chapter ${currentWord[HEADER_MAP.CHAPTER]}` : '';
-            const type = currentWord[HEADER_MAP.TYPE] || '';
-            wordContextDiv.textContent = `${chapter}${chapter && type ? ' | ' : ''}${type}`;
-
-            userAnswerInput.value = '';
-            userAnswerInput.focus();
-            userAnswerInput.style.borderColor = '#93c5fd'; // 초기 색상
-            progressText.textContent = `${currentIndex + 1}/${currentTestSet.length}`;
-        }
-
-        /**
-         * 사용자의 정답을 확인합니다.
-         */
-        function checkAnswer() {
-            if (!currentWord || !userAnswerInput.value.trim()) {
-                userAnswerInput.focus();
-                return;
-            }
-
-            const userAnswer = userAnswerInput.value.trim();
-            const correctMeaning = currentWord[HEADER_MAP.MEANING].trim();
-            
-            // 1. 공백, 품사, 괄호 등 정리하는 정규화 함수 (사용자 입력과 정답 모두에 적용)
-            const normalize = (text) => {
-                return text.toLowerCase()
-                    .replace(/\([^)]*\)/g, '') // 괄호와 괄호 안의 내용 제거
-                    .replace(/n\.|v\.|a\.|ad\.|etc\.|conj\./g, '') // 품사 표기 제거
-                    .replace(/[\s\.\,\/]/g, '') // 모든 공백, 마침표, 쉼표, 슬래시 제거
-                    .trim();
-            };
-
-            const normalizedUserAnswer = normalize(userAnswer);
-            
-            // 정답을 쉼표 또는 슬래시로 분리하여 각 부분을 확인합니다.
-            const correctParts = correctMeaning.split(/[,\/]/).map(part => normalize(part));
-
-            // 사용자 답안이 정답 부분 중 하나라도 완전히 일치하는지 확인
-            const isCorrect = correctParts.some(part => part === normalizedUserAnswer && part.length > 0);
-
-            if (isCorrect) {
-                showModal('정답입니다! 🎉', `단어: ${currentWord[HEADER_MAP.WORD]}\n\n입력: ${userAnswer}\n정답: ${correctMeaning}`, nextWord);
-                userAnswerInput.style.borderColor = '#10b981'; // 녹색 (Success)
+            if (isMeaningHidden) {
+                toggleMeaningBtn.textContent = '뜻 보이기 (정답지 전환)';
+                showModal('테스트지 모드', '뜻이 가려진 테스트지 모드입니다.\n\n인쇄 시 뜻이 가려진 상태로 출력됩니다.');
             } else {
-                showModal('오답입니다! ❌', `입력하신 답: ${userAnswer}\n\n정답: ${correctMeaning}`);
-                userAnswerInput.style.borderColor = '#ef4444'; // 빨간색 (Error)
+                toggleMeaningBtn.textContent = '뜻 가리기 (정답지 전환)';
+                showModal('정답지 모드', '뜻이 보이는 정답지 모드입니다.\n\n인쇄 시 뜻이 보이는 상태로 출력됩니다.');
             }
-        }
-
-        /**
-         * 현재 단어를 건너뛰고 정답을 보여줍니다.
-         */
-        function skipWord() {
-             if (!currentWord) return;
-             showModal('건너뛰기 (정답)', `단어: ${currentWord[HEADER_MAP.WORD]}\n정답: ${currentWord[HEADER_MAP.MEANING]}`, nextWord);
-             userAnswerInput.style.borderColor = '#fbbf24'; // 노란색
         }
 
         // 페이지 로드 시 자동으로 데이터 로드를 시도합니다.
