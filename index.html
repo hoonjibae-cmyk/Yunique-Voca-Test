@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>업로드 파일 단어 테스트</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Nanum+Gothic:wght@400;700&display=swap');
+        body {
+            font-family: 'Nanum Gothic', 'Inter', sans-serif;
+            background-color: #f4f7f9;
+        }
+        .card {
+            background-color: white;
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .btn-primary {
+            transition: all 0.15s ease-in-out;
+            box-shadow: 0 4px #106f40;
+            position: relative;
+            top: 0;
+        }
+        .btn-primary:active {
+            top: 2px;
+            box-shadow: 0 2px #106f40;
+        }
+        /* 로딩 스피너 애니메이션 */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #ffffff;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        /* 디버그 로그 섹션을 기본적으로 숨깁니다. */
+        #debugLogSection {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-out;
+        }
+        #debugLogSection.active {
+            max-height: 500px; /* 충분한 높이 */
+            margin-bottom: 1.5rem;
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-8 flex justify-center items-center min-h-screen">
+
+    <div id="app" class="w-full max-w-xl">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-2">업로드 파일 단어 학습기</h1>
+        <p class="text-center text-sm text-gray-500 mb-6">
+            <span id="loadStatusMessage" class="font-bold text-indigo-600">데이터 로딩 중...</span>
+        </p>
+
+        <!-- 디버그 로그 (오류 발생 시 표시) -->
+        <div id="debugLogSection">
+            <div class="card p-4 border-l-4 border-red-500 bg-red-100">
+                <p class="font-bold text-red-700 flex items-center mb-2">
+                    <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    데이터 로드 오류 상세
+                </p>
+                <pre id="debugLogContent" class="text-xs text-red-800 whitespace-pre-wrap font-mono"></pre>
+            </div>
+        </div>
+
+
+        <!-- 단어 테스트 섹션 -->
+        <div id="testSection" class="card p-6 hidden">
+            <h2 class="text-xl font-semibold mb-4 text-gray-700">단어 테스트 (<span id="progressText">0/0</span>)</h2>
+
+            <!-- 현재 단어 표시 -->
+            <div id="wordDisplay" class="text-center bg-gray-100 p-6 rounded-lg mb-6 border-b-4 border-gray-200">
+                <div class="text-sm font-medium text-gray-500">단어</div>
+                <div id="currentWord" class="text-4xl font-extrabold text-green-600 mt-1"></div>
+                <div id="wordContext" class="text-xs text-gray-400 mt-2"></div>
+            </div>
+
+            <!-- 사용자 입력 및 결과 -->
+            <input
+                type="text"
+                id="userAnswer"
+                class="w-full p-4 border-2 border-indigo-300 rounded-lg text-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-indigo-200 mb-4"
+                placeholder="여기에 뜻을 입력하세요 (Enter 키로 확인)"
+                onkeypress="if(event.key === 'Enter') checkAnswer()"
+            />
+
+            <div class="flex gap-4">
+                 <button
+                    id="checkBtn"
+                    class="w-1/2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg btn-primary"
+                    onclick="checkAnswer()"
+                >
+                    정답 확인
+                </button>
+                <button
+                    id="skipBtn"
+                    class="w-1/2 bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-6 rounded-lg btn-primary"
+                    onclick="skipWord()"
+                >
+                    건너뛰기 (정답 공개)
+                </button>
+            </div>
+
+            <!-- 메시지 모달 (Alert 대체) -->
+            <div id="messageModal" class="fixed inset-0 bg-gray-800 bg-opacity-75 hidden flex items-center justify-center p-4 z-50">
+                <div class="card p-6 w-full max-w-sm text-center transform transition-all duration-300">
+                    <h3 id="modalTitle" class="text-2xl font-bold mb-3"></h3>
+                    <p id="modalBody" class="text-gray-600 mb-6 whitespace-pre-line"></p>
+                    <button class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg btn-primary" onclick="closeModal()">확인</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // =========================
+        // 글로벌 변수 및 DOM 요소
+        // =========================
+        let vocabularyData = [];
+        let currentIndex = -1;
+        let currentWord = null;
+
+        // CSV 헤더 이름 (사용자님의 파일 구조와 일치)
+        const HEADER_MAP = {
+            CHAPTER: 'Chapter',
+            TYPE: 'Type',
+            WORD: 'Word',
+            MEANING: 'Meaning'
+        };
+
+        const loadStatusMessage = document.getElementById('loadStatusMessage');
+        const testSection = document.getElementById('testSection');
+        const debugLogSection = document.getElementById('debugLogSection');
+        const debugLogContent = document.getElementById('debugLogContent');
+        const currentWordDiv = document.getElementById('currentWord');
+        const wordContextDiv = document.getElementById('wordContext');
+        const userAnswerInput = document.getElementById('userAnswer');
+        const progressText = document.getElementById('progressText');
+        
+        const modal = document.getElementById('messageModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalBody = document.getElementById('modalBody');
+
+        // 사용자님께서 업로드하신 파일의 내부 접근 경로
+        // 이 경로를 통해 외부 접근 없이 파일 데이터를 가져옵니다.
+        const LOCAL_CSV_PATH = '/files/전체어휘 엑셀통합본_최종파일_수정 완료 - 단어테스트용.csv';
+
+        // =========================
+        // 헬퍼 함수
+        // =========================
+
+        /** 디버그 로그를 화면에 표시합니다. */
+        function updateDebugLog(message, isError = false) {
+            debugLogContent.textContent = message;
+            if (isError) {
+                debugLogSection.classList.add('active');
+                loadStatusMessage.classList.remove('text-indigo-600');
+                loadStatusMessage.classList.add('text-red-500');
+                loadStatusMessage.textContent = '❌ 파일 로드 실패. 아래 오류 메시지를 확인하세요.';
+            } else {
+                debugLogSection.classList.remove('active');
+                loadStatusMessage.classList.remove('text-red-500');
+                loadStatusMessage.classList.add('text-indigo-600');
+            }
+        }
+
+        /**
+         * 간단한 모달을 표시합니다 (alert() 대체)
+         */
+        function showModal(title, body, onClose = null) {
+            modalTitle.textContent = title;
+            modalBody.textContent = body;
+            modal.classList.remove('hidden');
+            
+            const closeHandler = () => {
+                closeModal();
+                if (onClose) onClose();
+                modal.removeEventListener('click', modalClickListener);
+            };
+
+            // 모달 내부에서 '확인' 버튼이나 모달 배경을 클릭했을 때만 닫히도록 처리
+            const modalClickListener = (event) => {
+                if (event.target.tagName === 'BUTTON' || event.target.id === 'messageModal') {
+                    closeHandler();
+                }
+            };
+            modal.addEventListener('click', modalClickListener);
+        }
+
+        /** 모달을 닫습니다. */
+        function closeModal() {
+            modal.classList.add('hidden');
+        }
+
+        /**
+         * 배열을 무작위로 섞습니다. (Fisher-Yates 알고리즘)
+         */
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        // =========================
+        // 데이터 처리 로직
+        // =========================
+
+        /**
+         * CSV 텍스트를 파싱하여 객체 배열로 변환합니다. (따옴표로 감싸진 필드 처리 개선)
+         * @param {string} csvText - 불러온 CSV 파일의 내용
+         * @returns {Array<Object>} 파싱된 단어 데이터 배열
+         */
+        function parseCSV(csvText) {
+            const lines = csvText.trim().split('\n');
+            if (lines.length <= 1) return []; 
+            
+            // 헤더 추출 및 정리
+            const headers = lines[0].split(',').map(header => header.trim().replace(/"/g, ''));
+            const data = [];
+
+            // 정규식: 따옴표로 감싸진 필드 ("...") 또는 쉼표가 아닌 필드 (non-comma)를 찾음
+            const csvRegex = /(".*?"|[^",]+)(?=\s*,|\s*$)/g; 
+
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+
+                const values = line.match(csvRegex) || [];
+                
+                if (values.length !== headers.length) {
+                    console.warn(`[CSV Skip] Line ${i + 1} column count mismatch. Expected ${headers.length}, got ${values.length}. Line: ${line}`);
+                    continue; 
+                }
+
+                const row = {};
+                headers.forEach((key, index) => {
+                    let value = values[index] ? values[index].trim() : '';
+                    // 쌍따옴표 제거 (예: "n.폐기물, 낭비 " -> n.폐기물, 낭비 )
+                    if (value.startsWith('"') && value.endsWith('"')) {
+                        value = value.substring(1, value.length - 1);
+                    }
+                    row[key] = value.trim();
+                });
+                
+                // 단어와 뜻이 모두 있는 유효한 행만 저장
+                if (row[HEADER_MAP.WORD] && row[HEADER_MAP.MEANING]) {
+                    data.push(row);
+                }
+            }
+            return data;
+        }
+
+        /**
+         * 내부 파일 경로에서 CSV 파일을 가져와 파싱합니다. (자동 실행)
+         */
+        async function loadData() {
+            updateDebugLog('파일을 내부적으로 불러오는 중입니다...', false);
+
+            try {
+                // 로컬 파일 경로를 사용하여 데이터 요청 (CORS 문제 해결)
+                const response = await fetch(LOCAL_CSV_PATH);
+                
+                if (!response.ok) {
+                    const errorDetails = `파일 경로: ${LOCAL_CSV_PATH}\nHTTP 상태 코드: ${response.status} ${response.statusText}\n(업로드된 파일명과 경로가 일치하는지 확인해주세요.)`;
+                    throw new Error(errorDetails);
+                }
+                
+                // 파일 내용을 텍스트로 읽어옵니다.
+                const csvText = await response.text();
+                
+                // CSV 파싱
+                vocabularyData = parseCSV(csvText);
+                
+                if (vocabularyData.length === 0) {
+                    updateDebugLog(`파일에서 유효한 단어 데이터를 찾을 수 없습니다. (헤더 또는 내용 확인 필요)\n\n-- 파일 시작 부분 --\n${csvText.substring(0, 500)}...`, true);
+                    return;
+                }
+
+                loadStatusMessage.textContent = `✅ 총 ${vocabularyData.length}개의 단어를 성공적으로 불러왔습니다.`;
+                updateDebugLog(`데이터 로드 성공: ${vocabularyData.length}개 항목 로드됨.`, false);
+
+                // 데이터 로드 성공 후 테스트 시작
+                startTest();
+
+            } catch (error) {
+                console.error('데이터 로드 중 오류:', error);
+                // 오류 메시지를 디버그 로그에 표시
+                updateDebugLog(`❌ 데이터 로드/파싱 실패:\n${error.message}`, true);
+            }
+        }
+
+        // =========================
+        // 테스트 로직
+        // =========================
+
+        /**
+         * 테스트를 시작하고 다음 단어를 표시합니다.
+         */
+        function startTest() {
+            testSection.classList.remove('hidden');
+            shuffleArray(vocabularyData); 
+            currentIndex = -1; 
+            userAnswerInput.value = '';
+            userAnswerInput.focus();
+            nextWord();
+        }
+
+        /**
+         * 다음 단어를 화면에 표시합니다.
+         */
+        function nextWord() {
+            currentIndex++;
+            
+            if (currentIndex >= vocabularyData.length) {
+                showModal('테스트 완료! 🎊', `총 ${vocabularyData.length}개의 단어 테스트를 마쳤습니다. 처음부터 다시 시작합니다.`, startTest);
+                return;
+            }
+
+            currentWord = vocabularyData[currentIndex];
+            currentWordDiv.textContent = currentWord[HEADER_MAP.WORD];
+            
+            // Chapter와 Type 정보를 context에 표시하여 힌트 제공
+            const chapter = currentWord[HEADER_MAP.CHAPTER] ? `Chapter ${currentWord[HEADER_MAP.CHAPTER]}` : '';
+            const type = currentWord[HEADER_MAP.TYPE] || '';
+            wordContextDiv.textContent = `${chapter}${chapter && type ? ' | ' : ''}${type}`;
+
+            userAnswerInput.value = '';
+            userAnswerInput.focus();
+            userAnswerInput.style.borderColor = '#93c5fd'; 
+            progressText.textContent = `${currentIndex + 1}/${vocabularyData.length}`;
+        }
+
+        /**
+         * 사용자의 정답을 확인합니다.
+         */
+        function checkAnswer() {
+            if (!currentWord || !userAnswerInput.value.trim()) {
+                userAnswerInput.focus();
+                return;
+            }
+
+            const userAnswer = userAnswerInput.value.trim();
+            const correctMeaning = currentWord[HEADER_MAP.MEANING].trim();
+            
+            // 1. 공백, 품사, 괄호 등 정리하는 정규화 함수
+            const normalize = (text) => {
+                return text.toLowerCase()
+                    .replace(/\([^)]*\)/g, '') // 괄호와 괄호 안의 내용 제거
+                    .replace(/n\.|v\.|a\.|ad\.|etc\.|conj\./g, '') // 품사 표기 제거
+                    .replace(/[\s\.\,\/]/g, '') // 모든 공백, 마침표, 쉼표, 슬래시 제거
+                    .trim();
+            };
+
+            const normalizedUserAnswer = normalize(userAnswer);
+            
+            // 정답을 쉼표 또는 슬래시로 분리하여 각 부분을 확인합니다.
+            const correctParts = correctMeaning.split(/[,\/]/).map(part => normalize(part));
+
+            // 사용자 답안이 정답 부분 중 하나라도 일치하는지 확인 (가장 유연한 검사)
+            // 예를 들어, 정답이 "폐기물, 낭비"일 때 사용자가 "낭비"만 입력해도 정답으로 인정
+            const isCorrect = correctParts.some(part => part === normalizedUserAnswer);
+
+
+            if (isCorrect) {
+                showModal('정답입니다! 🎉', `단어: ${currentWord[HEADER_MAP.WORD]}\n\n입력: ${userAnswer}\n정답: ${correctMeaning}`, nextWord);
+                userAnswerInput.style.borderColor = '#10b981'; // 녹색
+            } else {
+                showModal('오답입니다! ❌', `입력하신 답: ${userAnswer}\n\n정답: ${correctMeaning}`);
+                userAnswerInput.style.borderColor = '#ef4444'; // 빨간색
+            }
+        }
+
+        /**
+         * 현재 단어를 건너뛰고 정답을 보여줍니다.
+         */
+        function skipWord() {
+             if (!currentWord) return;
+             showModal('건너뛰기 (정답)', `단어: ${currentWord[HEADER_MAP.WORD]}\n정답: ${currentWord[HEADER_MAP.MEANING]}`, nextWord);
+             userAnswerInput.style.borderColor = '#fbbf24'; // 노란색
+        }
+
+        // 페이지 로드 시 자동으로 데이터 로드를 시도합니다.
+        window.onload = loadData;
+    </script>
+</body>
+</html>
