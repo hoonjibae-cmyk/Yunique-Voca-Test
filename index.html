@@ -3,491 +3,588 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>목동유쌤영어학원 단어 테스트지 생성기</title>
-    <!-- Tailwind CSS CDN을 로드합니다. -->
+    <title>단어 테스트지 생성기</title>
+    <!-- Tailwind CSS CDN 로드 -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Nanum+Gothic:wght@400;700&display=swap');
-        body {
-            font-family: 'Nanum Gothic', 'Inter', sans-serif;
-            background-color: #f4f7f9;
-        }
-        .card {
-            background-color: white;
-            border-radius: 1rem;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        }
-        .btn-primary {
-            transition: all 0.15s ease-in-out;
-            box-shadow: 0 4px #0d6439;
-            position: relative;
-            top: 0;
-            background-color: #10B981; 
-        }
-        .btn-primary:hover {
-             background-color: #059669; 
-        }
-        .btn-primary:active {
-            top: 2px;
-            box-shadow: 0 2px #0d6439;
-        }
-        .input-focus:focus {
-            outline: none;
-            border-color: #4f46e5;
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.5);
-        }
-        
-        /* 테스트지 출력 관련 스타일 */
-        #printScreen {
-            padding: 2rem;
-        }
-        .word-row {
-            display: grid;
-            grid-template-columns: 2fr 3fr; /* 단어 2, 뜻 3 비율 */
-            gap: 1rem;
-            padding: 0.75rem 0;
-            border-bottom: 1px dashed #e0e0e0;
-        }
-        .word-cell, .meaning-cell {
-            font-size: 1rem;
-            color: #1f2937;
-        }
-        .meaning-cell.hidden-meaning {
-            color: transparent;
-            background-color: #e5e7eb; /* 가려진 텍스트를 위한 배경 */
-            border-radius: 0.25rem;
-            padding: 0 0.5rem;
-            min-height: 1.5rem; /* 빈 공간 확보 */
-            display: block;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        /* 인쇄 시 레이아웃 조정 */
+        /* 커스텀 스타일 및 프린트 스타일 */
         @media print {
-            body { 
-                background-color: white; 
+            body {
                 margin: 0;
+                padding: 0;
             }
-            #app { 
-                max-width: 100%;
-                box-shadow: none; 
+            .controls, .print-button {
+                display: none !important;
+            }
+            .paper-container {
+                box-shadow: none !important;
+                border: none !important;
                 margin: 0;
+                padding: 1cm; /* 인쇄 여백 */
+                width: 100%;
+                min-height: auto;
             }
-            .header-controls, .non-print {
-                display: none !important; /* 설정, 버튼 숨기기 */
+            .test-paper table {
+                page-break-inside: auto;
+                width: 100%;
             }
-            #printScreen {
-                padding: 0; 
+            .test-paper tr {
+                page-break-inside: avoid;
+                page-break-after: auto;
             }
-            .word-row {
-                padding: 0.5rem 0;
-                border-bottom: 1px solid #ccc; /* 인쇄 시 진한 실선 */
-                page-break-inside: avoid; /* 행 잘림 방지 */
+            .test-paper th, .test-paper td {
+                padding: 5px;
             }
-            .meaning-cell.hidden-meaning {
-                background-color: #fff; /* 인쇄 시 배경 제거 */
-                border: 1px solid #000;
-                color: transparent; /* 텍스트는 여전히 숨김 */
+            .test-paper h1 {
+                font-size: 1.5em;
             }
+        }
+        /* 다중 선택 드롭다운 스타일 */
+        .multi-select-container {
+            position: relative;
+        }
+        .multi-select-dropdown {
+            display: none;
+            position: absolute;
+            background-color: white;
+            border: 1px solid #ccc;
+            border-radius: 0.5rem;
+            z-index: 10;
+            max-height: 200px;
+            overflow-y: auto;
+            width: 100%;
+            padding: 0.5rem 0;
+        }
+        .multi-select-dropdown label {
+            display: block;
+            padding: 0.25rem 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .multi-select-dropdown label:hover {
+            background-color: #f3f4f6;
+        }
+        .multi-select-button {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
     </style>
 </head>
-<body class="flex justify-center items-start min-h-screen">
+<body class="bg-gray-100 min-h-screen p-4 flex flex-col items-center font-sans">
 
-    <div id="app" class="w-full max-w-4xl pt-8 pb-8">
+    <div id="loadingIndicator" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="text-white text-xl p-4 bg-blue-600 rounded-lg shadow-lg">데이터 로딩 중...</div>
+    </div>
+
+    <!-- 제어판 (Controls) -->
+    <div class="controls w-full max-w-4xl bg-white p-6 rounded-xl shadow-lg mb-6 sticky top-4 z-20">
+        <h1 class="text-2xl font-bold text-gray-800 mb-4">단어 테스트지 생성 옵션</h1>
         
-        <!-- 컨트롤 및 상태 메시지 (인쇄 시 숨김) -->
-        <div class="header-controls px-4 sm:px-0">
-            <header class="text-center mb-6">
-                <h1 class="text-3xl font-bold text-gray-800">목동유쌤영어학원</h1>
-                <p class="text-xl font-semibold text-indigo-600 mt-1">단어 테스트지 생성기</p>
-                <p id="loadStatusMessage" class="text-sm font-bold text-gray-500 mt-2">데이터 로딩 중...</p>
-            </header>
-        </div>
-
-        <!-- 1. 세팅 화면 -->
-        <div id="setupScreen" class="card p-6 header-controls">
-            <h2 class="text-2xl font-semibold text-gray-700 mb-4 border-b pb-2">테스트지 필터 설정</h2>
+        <div class="grid md:grid-cols-3 gap-4">
             
-            <div id="filterOptions" class="space-y-4">
-                <!-- 챕터 필터 -->
-                <div>
-                    <label for="chapterFilter" class="block text-sm font-medium text-gray-700 mb-1">Chapter 선택:</label>
-                    <select id="chapterFilter" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                        <option value="all">전체 Chapter</option>
-                    </select>
-                </div>
-
-                <!-- 유형 필터 -->
-                <div>
-                    <label for="typeFilter" class="block text-sm font-medium text-gray-700 mb-1">단어 유형 선택:</label>
-                    <select id="typeFilter" class="w-full p-3 border border-gray-300 rounded-lg input-focus">
-                        <option value="all">전체 유형</option>
-                    </select>
-                </div>
-
-                <!-- 단어 개수 표시 -->
-                <div class="pt-2">
-                    <p class="text-lg font-bold text-gray-800">선택된 단어 개수: <span id="wordCountDisplay" class="text-indigo-600">0</span>개</p>
+            <!-- 챕터 다중 선택 -->
+            <div class="multi-select-container" id="chapterSelectContainer">
+                <label for="chapterSelectButton" class="block text-sm font-medium text-gray-700 mb-1">챕터 선택 (다중 선택 가능)</label>
+                <button id="chapterSelectButton" class="multi-select-button w-full bg-white border border-gray-300 rounded-lg shadow-sm px-4 py-2 text-left text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition ease-in-out duration-150">
+                    <span id="selectedChaptersText">모든 챕터</span>
+                    <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+                <div id="chapterSelectDropdown" class="multi-select-dropdown">
+                    <!-- 챕터 체크박스가 여기에 로드됩니다 -->
                 </div>
             </div>
 
-            <button
-                id="generateTestBtn"
-                class="w-full text-white font-bold py-3 px-6 rounded-lg btn-primary mt-6 disabled:opacity-50 disabled:shadow-none disabled:top-0"
-                onclick="generateTestPaper()"
-                disabled
-            >
-                테스트지 생성 및 출력 화면으로 이동
-            </button>
-        </div>
+            <!-- 단어 유형 필터 (표제어/연관어) -->
+            <div>
+                <label for="wordTypeFilter" class="block text-sm font-medium text-gray-700 mb-1">단어 유형 필터</label>
+                <select id="wordTypeFilter" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-lg shadow-sm">
+                    <option value="all">표제어 + 연관어 모두</option>
+                    <option value="표제어" selected>표제어만</option>
+                </select>
+            </div>
 
-        <!-- 2. 출력 화면 (테스트지) -->
-        <div id="printScreen" class="card hidden p-6">
-            
-            <!-- 출력 화면 제어 버튼 (인쇄 시 숨김) -->
-            <div class="non-print mb-4 flex justify-between items-center">
-                <button
-                    class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition-colors"
-                    onclick="switchScreen('setup')"
-                >
-                    &larr; 설정으로 돌아가기
-                </button>
-                <button
-                    id="toggleMeaningBtn"
-                    class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition-colors"
-                    onclick="toggleMeaningVisibility()"
-                >
-                    뜻 가리기 (정답지 전환)
-                </button>
-                <button
-                    class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg transition-colors"
-                    onclick="window.print()"
-                >
-                    테스트지 인쇄 🖨️
-                </button>
+            <!-- 테스트 개수 -->
+            <div>
+                <label for="wordCount" class="block text-sm font-medium text-gray-700 mb-1">테스트 단어 개수</label>
+                <input type="number" id="wordCount" value="20" min="5" max="100" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-2.5">
+            </div>
+
+            <!-- 테스트 유형 선택 (단어/뜻) -->
+            <div>
+                <label for="quizType" class="block text-sm font-medium text-gray-700 mb-1">테스트 유형</label>
+                <select id="quizType" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-lg shadow-sm">
+                    <option value="wordToMeaning">단어 보고 뜻 쓰기</option>
+                    <option value="meaningToWord">뜻 보고 단어 쓰기</option>
+                </select>
             </div>
             
-            <!-- 테스트지 헤더 (인쇄 포함) -->
-            <div id="testPaperHeader" class="mb-6 text-center border-b-2 border-gray-400 pb-4">
-                <h2 class="text-3xl font-extrabold text-gray-800">목동유쌤영어학원 단어 테스트지</h2>
-                <p class="text-lg font-medium text-gray-600 mt-1">
-                    <span id="testFilterSummary"></span>
-                </p>
-                <div class="flex justify-between mt-3 text-sm">
-                    <span>이름: _________________________</span>
-                    <span>날짜: _________________________</span>
-                    <span>총 단어 수: <span id="finalWordCount">0</span>개</span>
-                </div>
+            <!-- 용지 종류 선택 -->
+            <div>
+                <label for="paperSize" class="block text-sm font-medium text-gray-700 mb-1">용지 크기</label>
+                <select id="paperSize" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-lg shadow-sm">
+                    <option value="A4">A4 (210mm x 297mm)</option>
+                    <option value="Letter">Letter (216mm x 279mm)</option>
+                </select>
             </div>
 
-            <!-- 단어 목록 출력 영역 -->
-            <div id="wordListContainer" class="space-y-1">
-                <!-- 단어 목록이 여기에 생성됩니다. -->
-                <div class="word-row font-bold border-b-2 border-gray-600 mb-2">
-                    <div class="word-cell">단어 (Word)</div>
-                    <div class="meaning-cell">뜻 (Meaning)</div>
-                </div>
-            </div>
-
-            <div class="h-20 non-print"></div> <!-- 하단 여백 -->
-        </div>
-
-        <!-- 메시지 모달 (Alert 대체) -->
-        <div id="messageModal" class="fixed inset-0 bg-gray-800 bg-opacity-75 hidden flex items-center justify-center p-4 z-50">
-            <div class="card p-6 w-full max-w-sm text-center">
-                <h3 id="modalTitle" class="text-2xl font-bold mb-3"></h3>
-                <p id="modalBody" class="text-gray-600 mb-6 whitespace-pre-line"></p>
-                <button class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-150" onclick="closeModal()">확인</button>
+            <!-- 버튼 영역 -->
+            <div class="md:col-span-3 flex justify-end space-x-3 mt-4">
+                <button id="generateButton" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 ease-in-out">
+                    테스트지 생성
+                </button>
             </div>
         </div>
     </div>
 
-    <script>
-        // =========================
-        // 설정 및 글로벌 변수
-        // =========================
-        let fullVocabularyData = []; 
-        let currentTestSet = []; 
+    <!-- 오류 메시지 -->
+    <div id="errorMessage" class="w-full max-w-4xl p-4 bg-red-100 text-red-700 border border-red-400 rounded-lg hidden mb-6" role="alert">
+        <p class="font-bold">오류 발생:</p>
+        <p id="errorText"></p>
+    </div>
 
-        // ***** CSV 파일 이름 설정 *****
-        const CSV_FILE_PATH = 'word.csv'; 
-        // *****************************
+    <!-- 테스트지 미리보기 컨테이너 -->
+    <div id="paperContainer" class="paper-container w-full max-w-4xl bg-white shadow-2xl rounded-xl transition duration-300 ease-in-out">
+        <div id="testPaper" class="test-paper p-8">
+            <!-- 테스트지가 여기에 렌더링됩니다 -->
+            <p class="text-center text-gray-500">테스트지 생성 버튼을 눌러 미리보기를 확인하세요.</p>
+        </div>
+        <div id="answerPaper" class="test-paper p-8 hidden border-t border-dashed mt-4 pt-8">
+            <!-- 정답지가 여기에 렌더링됩니다 -->
+        </div>
+    </div>
 
-        // CSV 헤더 매핑
-        const HEADER_MAP = {
-            CHAPTER: 'Chapter',
-            TYPE: 'Type',
-            WORD: 'Word',
-            MEANING: 'Meaning'
-        };
+    <!-- 인쇄 버튼 -->
+    <div class="print-button w-full max-w-4xl mt-6 flex justify-end">
+        <button id="printButton" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-150 ease-in-out" disabled>
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m4 1v.01M10 13l2-2 2 2M7 17h10a2 2 0 002-2V9a2 2 0 00-2-2H7a2 2 0 00-2 2v6a2 2 0 002 2z"></path></svg>
+            테스트지 인쇄
+        </button>
+    </div>
 
-        // DOM 요소
-        const loadStatusMessage = document.getElementById('loadStatusMessage');
-        const setupScreen = document.getElementById('setupScreen');
-        const printScreen = document.getElementById('printScreen');
-        const chapterFilter = document.getElementById('chapterFilter');
-        const typeFilter = document.getElementById('typeFilter');
-        const wordCountDisplay = document.getElementById('wordCountDisplay');
-        const generateTestBtn = document.getElementById('generateTestBtn');
-        const testFilterSummary = document.getElementById('testFilterSummary');
-        const wordListContainer = document.getElementById('wordListContainer');
-        const finalWordCount = document.getElementById('finalWordCount');
-        const toggleMeaningBtn = document.getElementById('toggleMeaningBtn');
+
+    <script type="module">
+        // 전역 변수 설정
+        let vocabularyData = [];
+        let allChapters = [];
+        const WORD_FILE_NAME = "전체어휘 엑셀통합본_최종파일_수정 완료 - 단어테스트용.csv";
+
+        // DOM 요소 캐싱
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const chapterSelectDropdown = document.getElementById('chapterSelectDropdown');
+        const chapterSelectButton = document.getElementById('chapterSelectButton');
+        const chapterSelectContainer = document.getElementById('chapterSelectContainer');
+        const selectedChaptersText = document.getElementById('selectedChaptersText');
+        const wordTypeFilter = document.getElementById('wordTypeFilter');
+        const wordCountInput = document.getElementById('wordCount');
+        const quizTypeSelect = document.getElementById('quizType');
+        const paperSizeSelect = document.getElementById('paperSize');
+        const paperContainer = document.getElementById('paperContainer');
+        const testPaperDiv = document.getElementById('testPaper');
+        const answerPaperDiv = document.getElementById('answerPaper');
+        const generateButton = document.getElementById('generateButton');
+        const printButton = document.getElementById('printButton');
+        const errorMessageDiv = document.getElementById('errorMessage');
+        const errorText = document.getElementById('errorText');
         
-        let isMeaningHidden = true; // 뜻 가리기 초기 상태
+        // --- 유틸리티 함수 ---
 
-        // =========================
-        // 헬퍼 및 UI 함수
-        // =========================
-
-        function showModal(title, body, onClose = null) {
-            // ... (모달 함수는 이전 코드와 동일) ...
-            const modal = document.getElementById('messageModal');
-            const modalTitle = document.getElementById('modalTitle');
-            const modalBody = document.getElementById('modalBody');
-
-            modalTitle.textContent = title;
-            modalBody.textContent = body;
-            modal.classList.remove('hidden');
-            
-            const closeHandler = () => {
-                closeModal();
-                if (onClose) onClose();
-            };
-
-            const modalClickListener = (event) => {
-                if (event.target.tagName === 'BUTTON' || event.target.id === 'messageModal') {
-                    closeHandler();
-                    modal.removeEventListener('click', modalClickListener);
-                }
-            };
-            modal.addEventListener('click', modalClickListener);
-        }
-
-        function closeModal() {
-            document.getElementById('messageModal').classList.add('hidden');
-        }
-
-        function switchScreen(screen) {
-            setupScreen.classList.add('hidden');
-            printScreen.classList.add('hidden');
-            if (screen === 'setup') {
-                setupScreen.classList.remove('hidden');
-            } else if (screen === 'print') {
-                printScreen.classList.remove('hidden');
-            }
-        }
-        
-        function populateFilters() {
-            const chapters = new Set(fullVocabularyData.map(d => d[HEADER_MAP.CHAPTER]).filter(c => c));
-            const types = new Set(fullVocabularyData.map(d => d[HEADER_MAP.TYPE]).filter(t => t));
-
-            // Chapter 필터
-            chapterFilter.innerHTML = '<option value="all">전체 Chapter</option>';
-            Array.from(chapters).sort((a, b) => {
-                const numA = parseInt(a);
-                const numB = parseInt(b);
-                if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
-                return String(a).localeCompare(String(b));
-            }).forEach(chapter => {
-                const option = document.createElement('option');
-                option.value = chapter;
-                option.textContent = `Chapter ${chapter}`;
-                chapterFilter.appendChild(option);
-            });
-
-            // Type 필터
-            typeFilter.innerHTML = '<option value="all">전체 유형</option>';
-            Array.from(types).sort().forEach(type => {
-                const option = document.createElement('option');
-                option.value = type;
-                option.textContent = type;
-                typeFilter.appendChild(option);
-            });
-            
-            chapterFilter.addEventListener('change', updateWordCount);
-            typeFilter.addEventListener('change', updateWordCount);
-            updateWordCount();
-        }
-
-        function updateWordCount() {
-            const selectedChapter = chapterFilter.value;
-            const selectedType = typeFilter.value;
-
-            currentTestSet = fullVocabularyData.filter(word => {
-                const chapterMatch = selectedChapter === 'all' || word[HEADER_MAP.CHAPTER] === selectedChapter;
-                const typeMatch = selectedType === 'all' || word[HEADER_MAP.TYPE] === selectedType;
-                return chapterMatch && typeMatch;
-            });
-
-            wordCountDisplay.textContent = currentTestSet.length;
-            
-            if (currentTestSet.length > 0) {
-                generateTestBtn.disabled = false;
-            } else {
-                generateTestBtn.disabled = true;
-            }
-        }
-
-        // =========================
-        // 데이터 처리 및 로드 로직
-        // =========================
-
+        /**
+         * CSV 데이터를 파싱하여 단어 배열을 반환합니다.
+         * @param {string} csvText - CSV 파일의 내용
+         * @returns {Array<Object>} 파싱된 단어 객체 배열
+         */
         function parseCSV(csvText) {
-            // ... (CSV 파싱 함수는 이전 코드와 동일) ...
-            const lines = csvText.trim().split('\n');
-            if (lines.length <= 1) return []; 
-            
-            const headers = lines[0].split(',').map(header => header.trim().replace(/"/g, ''));
+            const lines = csvText.split('\r\n').filter(line => line.trim() !== ''); // 빈 줄 제거
+            if (lines.length === 0) return [];
+
+            // 헤더: Chapter,Type,Word,Meaning
+            const headers = lines[0].split(',');
             const data = [];
 
-            const csvRegex = /(".*?"|[^",\n]+)(?=\s*,|\s*$)/g; 
-
             for (let i = 1; i < lines.length; i++) {
-                const line = lines[i].trim();
-                if (!line) continue;
+                const row = lines[i].match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g);
+                if (row && row.length === headers.length) {
+                    const obj = {};
+                    obj[headers[0]] = row[0].trim(); // Chapter (챕터)
+                    obj[headers[1]] = row[1].trim(); // Type (표제어/연관어)
+                    // 따옴표 제거 및 앞뒤 공백 제거
+                    obj[headers[2]] = row[2].trim().replace(/^"|"$/g, ''); // Word (단어)
+                    obj[headers[3]] = row[3].trim().replace(/^"|"$/g, ''); // Meaning (뜻)
 
-                const values = line.match(csvRegex) || [];
-                
-                if (values.length !== headers.length) {
-                    console.warn(`[CSV Error] Line ${i + 1} column count mismatch. Skipping line: ${line}`);
-                    continue; 
-                }
-
-                const row = {};
-                headers.forEach((key, index) => {
-                    let value = values[index] ? values[index].trim() : '';
-                    if (value.startsWith('"') && value.endsWith('"')) {
-                        value = value.substring(1, value.length - 1);
-                    }
-                    row[key] = value.trim();
-                });
-                
-                if (row[HEADER_MAP.WORD] && row[HEADER_MAP.MEANING]) {
-                    data.push(row);
+                    // 챕터는 숫자로 변환
+                    obj.Chapter = parseInt(obj.Chapter, 10);
+                    
+                    data.push(obj);
                 }
             }
             return data;
         }
 
-        async function loadData() {
-            try {
-                loadStatusMessage.textContent = `데이터 로딩 중 (${CSV_FILE_PATH})...`;
-                const response = await fetch(CSV_FILE_PATH);
-                
-                if (!response.ok) {
-                    throw new Error(`파일을 찾을 수 없거나 로드할 수 없습니다. (HTTP ${response.status})`);
-                }
-                
-                const csvText = await response.text();
-                
-                fullVocabularyData = parseCSV(csvText);
-                
-                if (fullVocabularyData.length === 0) {
-                    loadStatusMessage.classList.add('text-red-500');
-                    loadStatusMessage.textContent = '❌ 데이터 로드 실패: 유효한 단어 항목을 찾을 수 없습니다. (CSV 형식 확인)';
-                    generateTestBtn.disabled = true;
-                    return;
-                }
-
-                loadStatusMessage.classList.remove('text-indigo-600');
-                loadStatusMessage.classList.add('text-green-600');
-                loadStatusMessage.textContent = `✅ 총 ${fullVocabularyData.length}개의 단어를 성공적으로 불러왔습니다.`;
-
-                populateFilters();
-                switchScreen('setup');
-
-            } catch (error) {
-                console.error('데이터 로드 중 오류:', error);
-                loadStatusMessage.classList.remove('text-indigo-600');
-                loadStatusMessage.classList.add('text-red-500');
-                loadStatusMessage.textContent = `❌ 데이터 로드 실패: ${error.message}. (파일 위치 확인)`;
-                generateTestBtn.disabled = true;
+        /**
+         * 배열을 무작위로 섞는 Fisher-Yates 알고리즘
+         * @param {Array} array - 섞을 배열
+         * @returns {Array} 섞인 배열
+         */
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
             }
+            return array;
         }
 
-        // =========================
-        // 테스트지 생성 및 출력 로직
-        // =========================
+        /**
+         * 오류 메시지를 표시하거나 숨깁니다.
+         * @param {string | null} message - 표시할 오류 메시지 (null이면 숨김)
+         */
+        function displayError(message) {
+            if (message) {
+                errorText.textContent = message;
+                errorMessageDiv.classList.remove('hidden');
+                console.error('ERROR:', message);
+            } else {
+                errorMessageDiv.classList.add('hidden');
+                errorText.textContent = '';
+            }
+            loadingIndicator.classList.add('hidden');
+            generateButton.disabled = false;
+        }
+        
+        // --- 챕터 드롭다운 제어 함수 ---
 
         /**
-         * 필터링된 단어 세트를 기반으로 테스트지 화면을 생성합니다.
+         * 챕터 목록을 드롭다운에 렌더링합니다.
          */
-        function generateTestPaper() {
-            if (currentTestSet.length === 0) {
-                 showModal('오류', '선택된 단어가 없습니다. 필터 조건을 조정해주세요.');
-                 return;
-            }
+        function renderChapterDropdown() {
+            if (allChapters.length === 0) return;
 
-            // 1. 테스트지 상단 요약 업데이트
-            const chapterText = chapterFilter.value === 'all' ? '전체 Chapter' : `Chapter ${chapterFilter.value}`;
-            const typeText = typeFilter.value === 'all' ? '전체 유형' : `${typeFilter.value}`;
-            testFilterSummary.textContent = `(${chapterText}, ${typeText})`;
-            finalWordCount.textContent = currentTestSet.length;
+            // 중복 제거된 챕터 목록을 정렬
+            const sortedChapters = [...new Set(allChapters)].sort((a, b) => a - b);
             
-            // 2. 단어 목록 HTML 생성
-            let listHtml = `
-                <div class="word-row font-bold border-b-2 border-gray-600 mb-2">
-                    <div class="word-cell">단어 (Word)</div>
-                    <div class="meaning-cell">뜻 (Meaning)</div>
-                </div>
+            // 드롭다운 내용 생성
+            let html = `
+                <label class="block px-4 py-2 font-semibold text-gray-800 border-b border-gray-100 cursor-default">챕터 전체 선택/해제</label>
+                <label class="px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center">
+                    <input type="checkbox" id="selectAllChapters" class="form-checkbox h-4 w-4 text-indigo-600 transition duration-150 ease-in-out rounded-sm">
+                    <span class="ml-2">전체 선택/해제</span>
+                </label>
+                <div class="border-t border-gray-100 my-1"></div>
             `;
             
-            currentTestSet.forEach((word, index) => {
-                const meaning = word[HEADER_MAP.MEANING].trim() || '뜻 없음';
-                // 뜻이 기본적으로 가려진 상태로 생성
-                const meaningClass = isMeaningHidden ? 'hidden-meaning' : '';
-                
-                listHtml += `
-                    <div class="word-row">
-                        <div class="word-cell">
-                            <span class="text-xs text-gray-400 mr-2">${index + 1}.</span>
-                            <span class="font-medium">${word[HEADER_MAP.WORD]}</span>
-                        </div>
-                        <div class="meaning-cell ${meaningClass}">
-                            ${meaning}
-                        </div>
-                    </div>
+            sortedChapters.forEach(chapter => {
+                html += `
+                    <label class="px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center">
+                        <input type="checkbox" name="chapter" value="${chapter}" checked class="chapter-checkbox form-checkbox h-4 w-4 text-indigo-600 transition duration-150 ease-in-out rounded-sm">
+                        <span class="ml-2">챕터 ${chapter}</span>
+                    </label>
                 `;
             });
-
-            wordListContainer.innerHTML = listHtml;
             
-            // 3. 버튼 텍스트 초기화 및 화면 전환
-            isMeaningHidden = true;
-            toggleMeaningBtn.textContent = '뜻 가리기 (정답지 전환)';
-            switchScreen('print');
+            chapterSelectDropdown.innerHTML = html;
+            
+            // 이벤트 리스너 연결
+            document.getElementById('selectAllChapters').addEventListener('change', handleSelectAll);
+            document.querySelectorAll('.chapter-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', updateSelectedChaptersText);
+            });
+            updateSelectedChaptersText();
+        }
+
+        /**
+         * 챕터 전체 선택/해제 핸들러
+         * @param {Event} e - 이벤트 객체
+         */
+        function handleSelectAll(e) {
+            const isChecked = e.target.checked;
+            document.querySelectorAll('.chapter-checkbox').forEach(checkbox => {
+                checkbox.checked = isChecked;
+            });
+            updateSelectedChaptersText();
+        }
+
+        /**
+         * 선택된 챕터 개수를 버튼 텍스트로 업데이트
+         */
+        function updateSelectedChaptersText() {
+            const checkedBoxes = document.querySelectorAll('.chapter-checkbox:checked');
+            const totalChapters = document.querySelectorAll('.chapter-checkbox').length;
+            const selectAllCheckbox = document.getElementById('selectAllChapters');
+            
+            if (checkedBoxes.length === 0) {
+                selectedChaptersText.textContent = '챕터를 선택하세요';
+                if (selectAllCheckbox) selectAllCheckbox.checked = false;
+            } else if (checkedBoxes.length === totalChapters) {
+                selectedChaptersText.textContent = '모든 챕터';
+                if (selectAllCheckbox) selectAllCheckbox.checked = true;
+            } else {
+                selectedChaptersText.textContent = `${checkedBoxes.length}개의 챕터 선택됨`;
+                if (selectAllCheckbox) selectAllCheckbox.checked = false;
+            }
         }
         
         /**
-         * 뜻 셀의 가리기/보이기 상태를 전환합니다.
+         * 드롭다운 토글 및 외부 클릭 처리
          */
-        function toggleMeaningVisibility() {
-            const meaningCells = document.querySelectorAll('#wordListContainer .meaning-cell');
-            isMeaningHidden = !isMeaningHidden;
-            
-            meaningCells.forEach(cell => {
-                if (isMeaningHidden) {
-                    cell.classList.add('hidden-meaning');
-                } else {
-                    cell.classList.remove('hidden-meaning');
+        function setupDropdownToggle() {
+            let isDropdownOpen = false;
+
+            chapterSelectButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                isDropdownOpen = !isDropdownOpen;
+                chapterSelectDropdown.style.display = isDropdownOpen ? 'block' : 'none';
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!chapterSelectContainer.contains(e.target) && isDropdownOpen) {
+                    isDropdownOpen = false;
+                    chapterSelectDropdown.style.display = 'none';
                 }
             });
+        }
+
+
+        // --- 데이터 로드 및 초기화 ---
+
+        /**
+         * CSV 파일을 로드하고 파싱하여 전역 변수를 초기화합니다.
+         */
+        async function loadData() {
+            loadingIndicator.classList.remove('hidden');
+            displayError(null);
             
-            if (isMeaningHidden) {
-                toggleMeaningBtn.textContent = '뜻 보이기 (정답지 전환)';
-                showModal('테스트지 모드', '뜻이 가려진 테스트지 모드입니다.\n\n인쇄 시 뜻이 가려진 상태로 출력됩니다.');
-            } else {
-                toggleMeaningBtn.textContent = '뜻 가리기 (정답지 전환)';
-                showModal('정답지 모드', '뜻이 보이는 정답지 모드입니다.\n\n인쇄 시 뜻이 보이는 상태로 출력됩니다.');
+            try {
+                // 이 환경에서는 파일 시스템 접근이 제한되므로,
+                // 사용자에게 파일 업로드를 요청하거나 이미 업로드된 파일을 사용해야 합니다.
+                // 여기서는 이미 업로드된 파일을 사용한다고 가정합니다.
+                
+                // Canvas 환경에서 파일 접근을 위한 URL 생성 (fileNameIsCodeAccessible: true 가정)
+                const fileUrl = window.getFileUrl ? window.getFileUrl(WORD_FILE_NAME) : null;
+
+                if (!fileUrl) {
+                    throw new Error("파일 URL을 가져올 수 없습니다. 파일이 업로드되었는지 확인하거나, 파일명('"+WORD_FILE_NAME+"')이 정확한지 확인해 주세요.");
+                }
+
+                const response = await fetch(fileUrl);
+                if (!response.ok) {
+                    throw new Error(`파일을 로드하는 데 실패했습니다: ${response.statusText}`);
+                }
+                
+                const csvText = await response.text();
+                vocabularyData = parseCSV(csvText);
+
+                if (vocabularyData.length === 0) {
+                    throw new Error("CSV 파일에서 유효한 단어 데이터를 찾을 수 없습니다.");
+                }
+                
+                // 챕터 목록 추출 및 초기화
+                allChapters = vocabularyData
+                    .map(item => item.Chapter)
+                    .filter(c => !isNaN(c)); // 유효한 숫자 챕터만 필터링
+
+                // 챕터 드롭다운 렌더링
+                renderChapterDropdown();
+                setupDropdownToggle();
+
+                console.log(`총 ${vocabularyData.length}개의 단어 로드 완료. 챕터: ${[...new Set(allChapters)].sort((a, b) => a - b)}`);
+
+            } catch (error) {
+                displayError('데이터 로드 중 심각한 오류가 발생했습니다: ' + error.message);
+                console.error(error);
+            } finally {
+                loadingIndicator.classList.add('hidden');
+                generateButton.disabled = false;
             }
         }
 
-        // 페이지 로드 시 자동으로 데이터 로드를 시도합니다.
-        window.onload = loadData;
+        // --- 테스트지 생성 로직 ---
+
+        /**
+         * 선택된 필터를 기반으로 단어 목록을 생성합니다.
+         * @returns {Array<Object>} 필터링 및 섞인 단어 목록
+         */
+        function getFilteredAndShuffledWords() {
+            const selectedChapters = Array.from(document.querySelectorAll('.chapter-checkbox:checked')).map(cb => parseInt(cb.value, 10));
+            const wordType = wordTypeFilter.value;
+            const wordCount = parseInt(wordCountInput.value, 10);
+
+            if (selectedChapters.length === 0) {
+                displayError('테스트지를 생성하려면 하나 이상의 챕터를 선택해야 합니다.');
+                return [];
+            }
+
+            // 1. 챕터 및 단어 유형 필터링
+            let filteredWords = vocabularyData.filter(word => {
+                const chapterMatch = selectedChapters.includes(word.Chapter);
+                let typeMatch = true;
+                
+                if (wordType !== 'all') {
+                    // '표제어만' 선택 시: Type이 '표제어'인 경우만
+                    typeMatch = word.Type === wordType;
+                }
+                // 'all' 선택 시: 모든 Type 허용 (typeMatch = true)
+
+                return chapterMatch && typeMatch;
+            });
+            
+            if (filteredWords.length === 0) {
+                displayError('선택된 챕터 및 단어 유형 기준으로 일치하는 단어가 없습니다. 필터를 조정해 주세요.');
+                return [];
+            }
+
+            // 2. 무작위로 섞기
+            let shuffledWords = shuffleArray(filteredWords);
+
+            // 3. 테스트 개수만큼 자르기 (wordCount 초과 방지)
+            const finalWords = shuffledWords.slice(0, Math.min(wordCount, shuffledWords.length));
+            
+            if (finalWords.length === 0) {
+                 displayError('테스트 단어 개수를 설정할 수 없습니다. (필터링된 단어: 0개)');
+                 return [];
+            }
+            
+            return finalWords;
+        }
+
+        /**
+         * 테스트지와 정답지를 생성하여 DOM에 렌더링합니다.
+         */
+        function generateTestPaper() {
+            displayError(null);
+            generateButton.disabled = true;
+            printButton.disabled = true;
+
+            const selectedWords = getFilteredAndShuffledWords();
+            const quizType = quizTypeSelect.value;
+            const wordCount = parseInt(wordCountInput.value, 10);
+            const selectedChapters = Array.from(document.querySelectorAll('.chapter-checkbox:checked')).map(cb => cb.value).join(', ');
+
+            if (selectedWords.length === 0) {
+                generateButton.disabled = false;
+                return;
+            }
+
+            // --- 용지 크기 설정 ---
+            const paperSize = paperSizeSelect.value;
+            if (paperSize === 'A4') {
+                paperContainer.style.width = '210mm';
+                paperContainer.style.minHeight = '297mm';
+            } else if (paperSize === 'Letter') {
+                paperContainer.style.width = '216mm';
+                paperContainer.style.minHeight = '279mm';
+            }
+            
+            // --- 테스트지 생성 ---
+            const quizTitle = quizType === 'wordToMeaning' ? '단어 보고 뜻 쓰기 테스트' : '뜻 보고 단어 쓰기 테스트';
+            let testHtml = `
+                <div class="flex justify-between items-center mb-6 border-b border-gray-300 pb-2">
+                    <h1 class="text-xl font-bold text-gray-800">${quizTitle}</h1>
+                    <div class="flex flex-col text-sm text-gray-600 text-right">
+                        <span>날짜: _________</span>
+                        <span>이름: _________</span>
+                        <span>점수: _________</span>
+                    </div>
+                </div>
+                <div class="text-sm text-gray-600 mb-4">
+                    <p><strong>대상 챕터:</strong> ${selectedChapters}</p>
+                    <p><strong>출제 개수:</strong> ${selectedWords.length}개</p>
+                </div>
+                <table class="min-w-full divide-y divide-gray-200 border border-gray-300">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/12 border-r border-gray-300">No.</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-5/12 border-r border-gray-300">${quizType === 'wordToMeaning' ? '단어(Word)' : '뜻(Meaning)'}</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-6/12">${quizType === 'wordToMeaning' ? '뜻 (Meaning)' : '단어 (Word)'}</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+            `;
+
+            selectedWords.forEach((word, index) => {
+                const question = quizType === 'wordToMeaning' ? word.Word : word.Meaning;
+                
+                testHtml += `
+                    <tr>
+                        <td class="px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-300">${index + 1}.</td>
+                        <td class="px-6 py-3 text-sm text-gray-800 border-r border-gray-300">${question}</td>
+                        <td class="px-6 py-3 text-sm text-gray-500">${'__________________________________'}</td>
+                    </tr>
+                `;
+            });
+
+            testHtml += `</tbody></table>`;
+            testPaperDiv.innerHTML = testHtml;
+
+
+            // --- 정답지 생성 ---
+            let answerHtml = `
+                <div class="flex justify-between items-center mb-6 border-b border-gray-300 pb-2">
+                    <h1 class="text-xl font-bold text-red-600">정답지 (Answer Key)</h1>
+                    <div class="text-sm text-gray-600">
+                        <span>대상 챕터: ${selectedChapters}</span>
+                    </div>
+                </div>
+                <table class="min-w-full divide-y divide-gray-200 border border-gray-300">
+                    <thead class="bg-red-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-red-700 uppercase tracking-wider w-1/12 border-r border-gray-300">No.</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-red-700 uppercase tracking-wider w-5/12 border-r border-gray-300">단어(Word)</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-red-700 uppercase tracking-wider w-6/12">뜻(Meaning)</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+            `;
+
+            selectedWords.forEach((word, index) => {
+                answerHtml += `
+                    <tr class="hover:bg-red-50">
+                        <td class="px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-300">${index + 1}.</td>
+                        <td class="px-6 py-3 text-sm text-gray-800 border-r border-gray-300">${word.Word}</td>
+                        <td class="px-6 py-3 text-sm text-red-600">${word.Meaning}</td>
+                    </tr>
+                `;
+            });
+
+            answerHtml += `</tbody></table>`;
+            answerPaperDiv.innerHTML = answerHtml;
+            answerPaperDiv.classList.remove('hidden');
+
+            generateButton.disabled = false;
+            printButton.disabled = false;
+        }
+
+        /**
+         * 인쇄 기능을 실행합니다.
+         */
+        function printPaper() {
+            window.print();
+        }
+
+        // --- 초기화 및 이벤트 리스너 설정 ---
+        window.onload = function() {
+            loadData();
+            
+            generateButton.addEventListener('click', generateTestPaper);
+            printButton.addEventListener('click', printPaper);
+            paperSizeSelect.addEventListener('change', generateTestPaper);
+            
+            // 초기 미리보기 생성 (옵션)
+            generateTestPaper();
+        };
+
     </script>
 </body>
 </html>
