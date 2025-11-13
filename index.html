@@ -18,7 +18,7 @@
         }
     </script>
     <style>
-        /* 커스텀 스타일 및 프린트 스타일 */
+        /* 프린트 스타일 */
         @media print {
             body {
                 margin: 0;
@@ -51,27 +51,64 @@
             .test-grid {
                 display: grid;
                 grid-template-columns: repeat(2, 1fr);
-                gap: 8px 16px;
+                grid-auto-flow: column; /* 상하좌우 배치 */
+                column-gap: 24px;
+                row-gap: 6px;
             }
 
             .test-cell {
-                border: 1px solid #000;
-                padding: 6px;
-                min-height: 60px;
+                display: flex;
+                align-items: center;
+                font-size: 0.95rem;
+            }
+
+            .test-number {
+                width: 1.8rem;
+            }
+
+            .test-word {
+                min-width: 6rem;
+            }
+
+            .answer-line {
+                flex-grow: 1;
+                border-bottom: 1px solid #000;
+                margin-left: 0.5rem;
+                height: 0;
             }
         }
 
+        /* 화면용 레이아웃 */
         .test-grid {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 12px 16px;
+            grid-auto-flow: column; /* 상하좌우 배치 */
+            column-gap: 32px;
+            row-gap: 8px;
         }
 
         .test-cell {
-            border: 1px solid #e5e7eb;
-            border-radius: 0.5rem;
-            padding: 10px;
-            background-color: #ffffff;
+            display: flex;
+            align-items: center;
+            font-size: 0.95rem;
+            color: #111827;
+        }
+
+        .test-number {
+            width: 1.8rem;
+            font-weight: 500;
+        }
+
+        .test-word {
+            min-width: 6rem;
+            font-weight: 500;
+        }
+
+        .answer-line {
+            flex-grow: 1;
+            border-bottom: 1px solid #d1d5db;
+            margin-left: 0.5rem;
+            height: 0;
         }
 
         #scrollTopButton,
@@ -96,6 +133,7 @@
 </head>
 <body class="bg-gray-100 font-sans">
 
+    <!-- 상단 헤더 (웹용) -->
     <header class="header bg-white shadow-sm sticky top-0 z-30">
         <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
             <div class="flex items-center space-x-2">
@@ -111,6 +149,7 @@
         </div>
     </header>
 
+    <!-- 스크롤 이동 버튼 -->
     <button id="scrollTopButton" class="no-print bg-blue-600 text-white rounded-full p-3 shadow-lg hover:bg-blue-700 transition hidden" aria-label="맨 위로">
         ▲
     </button>
@@ -118,16 +157,20 @@
         ▼
     </button>
 
+    <!-- 로딩 오버레이 -->
     <div id="loadingOverlay" class="fixed inset-0 flex items-center justify-center z-50 hidden">
         <div class="text-white text-xl p-4 bg-blue-600 rounded-lg shadow-lg">데이터 로딩 중...</div>
     </div>
 
+    <!-- 메인 컨테이너 -->
     <main class="max-w-6xl mx-auto px-4 py-6">
 
+        <!-- 설정/제어 패널 -->
         <div class="controls w-full max-w-4xl bg-white p-6 rounded-xl shadow-lg mb-6 sticky top-4 z-20">
             <h1 class="text-2xl font-bold text-gray-800 mb-4">단어 테스트지 생성 옵션</h1>
             
             <div class="grid md:grid-cols-3 gap-4">
+                <!-- 챕터 선택 -->
                 <div class="multi-select-container" id="chapterSelectContainer">
                     <label for="chapterSelectButton" class="block text-sm font-medium text-gray-700 mb-1">챕터 선택 (다중 선택 가능)</label>
                     <button id="chapterSelectButton" disabled class="w-full flex justify-between items-center border border-gray-300 rounded-md px-3 py-2 bg-gray-50 text-sm text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-200 disabled:text-gray-500 disabled:cursor-not-allowed">
@@ -136,6 +179,7 @@
                             <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
                         </svg>
                     </button>
+                    <!-- 드롭다운 -->
                     <div id="chapterSelectDropdown" class="absolute mt-1 w-72 bg-white border border-gray-200 rounded-md shadow-lg z-30 hidden max-h-60 overflow-y-auto">
                         <div class="px-3 py-2 border-b border-gray-100 flex items-center justify-between">
                             <span class="text-xs text-gray-500">원하는 챕터를 모두 선택하세요.</span>
@@ -146,12 +190,14 @@
                     </div>
                 </div>
 
+                <!-- 문항 수 -->
                 <div>
                     <label for="wordCount" class="block text-sm font-medium text-gray-700 mb-1">문항 수 (1~200)</label>
-                    <input type="number" id="wordCount" min="1" max="200" value="40" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                    <p class="mt-1 text-xs text-gray-400">A4 기준 40~60문항 추천</p>
+                    <input type="number" id="wordCount" min="1" max="200" value="30" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <p class="mt-1 text-xs text-gray-400">A4 기준 30~40문항 추천</p>
                 </div>
 
+                <!-- 문제 유형 -->
                 <div>
                     <label for="testType" class="block text-sm font-medium text-gray-700 mb-1">문제 유형</label>
                     <select id="testType" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
@@ -163,7 +209,8 @@
             </div>
 
             <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
-                <div class="flex items-center space-x-3">
+                <div class="flex flex-wrap items-center space-x-3">
+                    <!-- 표제어/파생어 필터 -->
                     <div class="flex items-center space-x-2">
                         <label class="text-xs font-medium text-gray-700">단어 유형:</label>
                         <select id="wordTypeFilter" class="border border-gray-300 rounded-md px-2 py-1 text-xs shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
@@ -173,18 +220,22 @@
                         </select>
                     </div>
 
+                    <!-- 번호 표시 -->
                     <div class="flex items-center space-x-1">
-                        <input type="checkbox" id="showNumbering" class="h-4 w-4 text-blue-600 border-gray-300 rounded">
+                        <input type="checkbox" id="showNumbering" class="h-4 w-4 text-blue-600 border-gray-300 rounded" checked>
                         <label for="showNumbering" class="text-xs text-gray-700">문항 번호 표시</label>
                     </div>
                 </div>
 
-                <div class="flex items-center space-x-2">
+                <div class="flex flex-wrap items-center space-x-2">
                     <button id="generateButton" class="no-print inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:bg-gray-300 disabled:cursor-not-allowed">
                         테스트지 생성
                     </button>
-                    <button id="printButton" class="no-print inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
-                        인쇄하기 (Ctrl+P)
+                    <button id="printTestButton" class="no-print inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
+                        테스트지 인쇄
+                    </button>
+                    <button id="printAnswerButton" class="no-print inline-flex items-center px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2">
+                        정답지 인쇄
                     </button>
                 </div>
             </div>
@@ -193,14 +244,16 @@
             <div id="errorMessage" class="mt-1 text-xs text-red-500"></div>
         </div>
 
+        <!-- 테스트지 영역 (출력 대상) -->
         <section id="testPaper" class="print-area bg-white p-6 rounded-xl shadow-md">
             <div class="text-center text-gray-400 text-sm">CSV 데이터를 로딩 중입니다...</div>
         </section>
 
+        <!-- 정답지 영역 (화면용, 필요 시 별도 인쇄) -->
         <section id="answerSheet" class="no-print mt-6 bg-white p-4 rounded-xl shadow-md">
             <div class="flex items-center justify-between mb-2">
                 <h2 class="text-lg font-semibold text-gray-800">정답지 (미리보기용)</h2>
-                <p class="text-xs text-gray-400">※ 실제 인쇄에는 포함되지 않습니다. 필요 시 별도 캡처 or 복사</p>
+                <p class="text-xs text-gray-400">※ 기본 인쇄에서는 포함되지 않습니다. "정답지 인쇄" 버튼을 사용하세요.</p>
             </div>
             <div id="answerContent" class="text-sm text-gray-700 grid md:grid-cols-2 gap-x-8 gap-y-1">
             </div>
@@ -224,7 +277,8 @@
         const wordTypeFilter = document.getElementById('wordTypeFilter');
         const showNumberingCheckbox = document.getElementById('showNumbering');
         const generateButton = document.getElementById('generateButton');
-        const printButton = document.getElementById('printButton');
+        const printTestButton = document.getElementById('printTestButton');
+        const printAnswerButton = document.getElementById('printAnswerButton');
         const statusMessage = document.getElementById('statusMessage');
         const errorMessage = document.getElementById('errorMessage');
         const testPaper = document.getElementById('testPaper');
@@ -235,9 +289,7 @@
         const scrollBottomButton = document.getElementById('scrollBottomButton');
         const chapterSelectContainer = document.getElementById('chapterSelectContainer');
 
-        /* =======================
-           CSV 파서 (에러 방지 버전)
-           ======================= */
+        /* ===== CSV 파서 ===== */
         function parseCSV(csvText) {
             const lines = csvText.trim().split(/\r?\n/);
             const header = lines[0].split(',').map(h => h.trim());
@@ -273,7 +325,6 @@
                 }
                 columns.push(current.trim());
 
-                // ★ 열이 4개 미만이거나 인덱스가 없으면 해당 줄은 무시
                 if (
                     columns.length <= chapterIndex ||
                     columns.length <= typeIndex ||
@@ -369,6 +420,7 @@
             }
         }
 
+        /* ===== 챕터 드롭다운 ===== */
         function renderChapterDropdown() {
             const uniqueChapters = Array.from(new Set(allChapters.filter(c => !isNaN(c))));
             const sortedChapters = uniqueChapters.sort((a, b) => a - b);
@@ -454,6 +506,7 @@
             });
         }
 
+        /* ===== 문제 생성 ===== */
         function getFilteredAndShuffledWords() {
             const selectedChapters = Array.from(document.querySelectorAll('.chapter-checkbox:checked')).map(cb => parseInt(cb.value, 10));
             const wordType = wordTypeFilter.value;
@@ -492,6 +545,38 @@
                 return;
             }
 
+            /* 상단 요약 정보 */
+            const chapterList = Array.from(new Set(words.map(w => w.Chapter)))
+                .sort((a, b) => a - b)
+                .join(', ');
+
+            let typeLabel = '';
+            if (wordTypeFilter.value === '표제어') typeLabel = '표제어';
+            else if (wordTypeFilter.value === '파생어') typeLabel = '파생어';
+            else typeLabel = '전체';
+
+            let directionLabel = '';
+            if (testType === 'word-to-meaning') directionLabel = '영어→한글';
+            else if (testType === 'meaning-to-word') directionLabel = '한글→영어';
+            else directionLabel = '혼합';
+
+            const headerHtml = `
+                <div class="mb-2 flex justify-between items-baseline">
+                    <div>
+                        <div class="text-xs font-semibold text-gray-700">목동유쌤영어</div>
+                        <div class="text-xl font-bold text-gray-900">유니크보카 단어 테스트</div>
+                    </div>
+                    <div class="flex items-center text-sm text-gray-800">
+                        <span class="mr-2">이름</span>
+                        <span class="inline-block w-40 border-b border-gray-800 h-0"></span>
+                    </div>
+                </div>
+                <div class="border-t-2 border-gray-900 pt-2 mt-1 mb-4 text-xs text-gray-700">
+                    Chapter: ${chapterList || '-'} | 유형: ${typeLabel} | 방향: ${directionLabel} | 문항 수: ${words.length}
+                </div>
+            `;
+
+            /* 문제 & 정답 생성 */
             const testCells = [];
             const answers = [];
 
@@ -521,17 +606,9 @@
 
                 const cellHtml = `
                     <div class="test-cell question-block">
-                        <div class="flex justify-between items-start">
-                            <div class="flex-1">
-                                ${showNumbering ? `<span class="text-xs text-gray-500 mr-1">${number}.</span>` : ''}
-                                <span class="font-medium text-gray-800">${questionText}</span>
-                            </div>
-                            <div class="w-24 border-b border-gray-300 ml-2"></div>
-                        </div>
-                        <div class="mt-2 text-xs text-gray-400">
-                            <span class="mr-2 text-gray-400">[Chap ${item.Chapter}]</span>
-                            <span class="text-gray-400">${item.Type}</span>
-                        </div>
+                        ${showNumbering ? `<span class="test-number">${number}.</span>` : ''}
+                        <span class="test-word">${questionText}</span>
+                        <span class="answer-line"></span>
                     </div>
                 `;
 
@@ -545,31 +622,7 @@
                 </div>
             `;
 
-            const countedByChapter = words.reduce((acc, cur) => {
-                acc[cur.Chapter] = (acc[cur.Chapter] || 0) + 1;
-                return acc;
-            }, {});
-
-            const chapterSummary = Object.entries(countedByChapter)
-                .sort((a, b) => Number(a[0]) - Number(b[0]))
-                .map(([ch, cnt]) => `Ch${ch}: ${cnt}문항`)
-                .join(', ');
-
-            const metaHtml = `
-                <div class="mb-4 flex justify-between items-center">
-                    <div class="text-sm font-semibold text-gray-800">랜덤 단어 테스트</div>
-                    <div class="text-xs text-gray-500">${new Date().toLocaleDateString()}</div>
-                </div>
-                <div class="mb-4 flex items-center justify-between text-xs text-gray-500">
-                    <div>총 ${words.length}문항 | 챕터 분포: ${chapterSummary}</div>
-                    <div>문제 유형: ${
-                        testType === 'word-to-meaning' ? '영어 → 뜻 쓰기' :
-                        testType === 'meaning-to-word' ? '뜻 → 영어 쓰기' : '섞어서 출제'
-                    }</div>
-                </div>
-            `;
-
-            testPaper.innerHTML = metaHtml + gridHtml;
+            testPaper.innerHTML = headerHtml + gridHtml;
 
             answerContent.innerHTML = answers
                 .map(ans => `<div>${ans}</div>`)
@@ -588,6 +641,7 @@
             }
         }
 
+        /* ===== 기타 UI 이벤트 ===== */
         window.addEventListener('scroll', () => {
             const scrollY = window.scrollY || document.documentElement.scrollTop;
             const docHeight = document.documentElement.scrollHeight - window.innerHeight;
@@ -617,8 +671,27 @@
             generateTestPaper();
         });
 
-        printButton.addEventListener('click', () => {
+        /* 인쇄 버튼 - 테스트지 / 정답지 분리 */
+        printTestButton.addEventListener('click', () => {
+            // 테스트지만 인쇄: 정답지는 항상 no-print 유지
+            answerSheet.classList.add('no-print');
+            testPaper.classList.remove('no-print');
             window.print();
+        });
+
+        printAnswerButton.addEventListener('click', () => {
+            // 정답지만 인쇄: 테스트지는 no-print, 정답지는 인쇄
+            const answerHadNoPrint = answerSheet.classList.contains('no-print');
+
+            testPaper.classList.add('no-print');
+            answerSheet.classList.remove('no-print');
+            window.print();
+
+            // 인쇄 후 상태 복구
+            setTimeout(() => {
+                if (answerHadNoPrint) answerSheet.classList.add('no-print');
+                testPaper.classList.remove('no-print');
+            }, 0);
         });
 
         wordCountInput.addEventListener('change', () => {
