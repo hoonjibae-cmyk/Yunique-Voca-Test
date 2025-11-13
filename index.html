@@ -27,7 +27,6 @@
                 print-color-adjust: exact;
             }
 
-            /* 인쇄 시 컨트롤 패널, 헤더 등은 숨기기 */
             .no-print,
             .controls,
             .header,
@@ -36,7 +35,6 @@
                 display: none !important;
             }
 
-            /* A4 크기 설정 */
             @page {
                 size: A4;
                 margin: 10mm;
@@ -46,12 +44,10 @@
                 page-break-after: always;
             }
 
-            /* 각 문제 블록 사이 여백 조정 */
             .question-block {
                 page-break-inside: avoid;
             }
 
-            /* A4 한 페이지에 가로 2단, 세로 여러 줄로 보이도록 레이아웃 조정 */
             .test-grid {
                 display: grid;
                 grid-template-columns: repeat(2, 1fr);
@@ -65,7 +61,6 @@
             }
         }
 
-        /* 일반 화면용 레이아웃 */
         .test-grid {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -79,7 +74,6 @@
             background-color: #ffffff;
         }
 
-        /* 스크롤 이동 버튼 */
         #scrollTopButton,
         #scrollBottomButton {
             position: fixed;
@@ -95,7 +89,6 @@
             bottom: 1.25rem;
         }
 
-        /* 로딩 오버레이 */
         #loadingOverlay {
             backdrop-filter: blur(4px);
         }
@@ -103,7 +96,6 @@
 </head>
 <body class="bg-gray-100 font-sans">
 
-    <!-- 상단 헤더 -->
     <header class="header bg-white shadow-sm sticky top-0 z-30">
         <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
             <div class="flex items-center space-x-2">
@@ -119,7 +111,6 @@
         </div>
     </header>
 
-    <!-- 스크롤 이동 버튼 -->
     <button id="scrollTopButton" class="no-print bg-blue-600 text-white rounded-full p-3 shadow-lg hover:bg-blue-700 transition hidden" aria-label="맨 위로">
         ▲
     </button>
@@ -127,50 +118,40 @@
         ▼
     </button>
 
-    <!-- 로딩 오버레이 -->
     <div id="loadingOverlay" class="fixed inset-0 flex items-center justify-center z-50 hidden">
         <div class="text-white text-xl p-4 bg-blue-600 rounded-lg shadow-lg">데이터 로딩 중...</div>
     </div>
 
-    <!-- 메인 컨테이너 -->
     <main class="max-w-6xl mx-auto px-4 py-6">
 
-        <!-- 제어판 (Controls) -->
         <div class="controls w-full max-w-4xl bg-white p-6 rounded-xl shadow-lg mb-6 sticky top-4 z-20">
             <h1 class="text-2xl font-bold text-gray-800 mb-4">단어 테스트지 생성 옵션</h1>
             
             <div class="grid md:grid-cols-3 gap-4">
-                
-                <!-- 챕터 다중 선택 -->
                 <div class="multi-select-container" id="chapterSelectContainer">
                     <label for="chapterSelectButton" class="block text-sm font-medium text-gray-700 mb-1">챕터 선택 (다중 선택 가능)</label>
-                    <!-- 챕터 로드 전까지 비활성화 -->
                     <button id="chapterSelectButton" disabled class="w-full flex justify-between items-center border border-gray-300 rounded-md px-3 py-2 bg-gray-50 text-sm text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-200 disabled:text-gray-500 disabled:cursor-not-allowed">
                         <span id="selectedChaptersText">데이터 로드 중...</span>
                         <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                             <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
                         </svg>
                     </button>
-                    <!-- 드롭다운 -->
                     <div id="chapterSelectDropdown" class="absolute mt-1 w-72 bg-white border border-gray-200 rounded-md shadow-lg z-30 hidden max-h-60 overflow-y-auto">
                         <div class="px-3 py-2 border-b border-gray-100 flex items-center justify-between">
                             <span class="text-xs text-gray-500">원하는 챕터를 모두 선택하세요.</span>
                             <button id="selectAllChapters" class="text-xs text-blue-600 hover:underline">전체 선택</button>
                         </div>
                         <div id="chapterCheckboxList" class="py-1 text-sm text-gray-700 max-h-48 overflow-y-auto">
-                            <!-- JS로 채워짐 -->
                         </div>
                     </div>
                 </div>
 
-                <!-- 단어 수 설정 -->
                 <div>
                     <label for="wordCount" class="block text-sm font-medium text-gray-700 mb-1">문항 수 (1~200)</label>
                     <input type="number" id="wordCount" min="1" max="200" value="40" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                     <p class="mt-1 text-xs text-gray-400">A4 기준 40~60문항 추천</p>
                 </div>
 
-                <!-- 문제 유형 설정 -->
                 <div>
                     <label for="testType" class="block text-sm font-medium text-gray-700 mb-1">문제 유형</label>
                     <select id="testType" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
@@ -183,7 +164,6 @@
 
             <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
                 <div class="flex items-center space-x-3">
-                    <!-- 표제어/파생어 필터 -->
                     <div class="flex items-center space-x-2">
                         <label class="text-xs font-medium text-gray-700">단어 유형:</label>
                         <select id="wordTypeFilter" class="border border-gray-300 rounded-md px-2 py-1 text-xs shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
@@ -193,7 +173,6 @@
                         </select>
                     </div>
 
-                    <!-- 보기 번호 표시 옵션 -->
                     <div class="flex items-center space-x-1">
                         <input type="checkbox" id="showNumbering" class="h-4 w-4 text-blue-600 border-gray-300 rounded">
                         <label for="showNumbering" class="text-xs text-gray-700">문항 번호 표시</label>
@@ -210,41 +189,30 @@
                 </div>
             </div>
 
-            <!-- 상태/에러 메시지 -->
             <div id="statusMessage" class="mt-3 text-xs text-gray-500"></div>
             <div id="errorMessage" class="mt-1 text-xs text-red-500"></div>
         </div>
 
-        <!-- 테스트지 출력 영역 -->
         <section id="testPaper" class="print-area bg-white p-6 rounded-xl shadow-md">
-            <!-- 실제 문제 내용이 JS로 그려짐 -->
             <div class="text-center text-gray-400 text-sm">CSV 데이터를 로딩 중입니다...</div>
         </section>
 
-        <!-- 정답지 영역 (선택적으로 화면에만 표시) -->
         <section id="answerSheet" class="no-print mt-6 bg-white p-4 rounded-xl shadow-md">
             <div class="flex items-center justify-between mb-2">
                 <h2 class="text-lg font-semibold text-gray-800">정답지 (미리보기용)</h2>
                 <p class="text-xs text-gray-400">※ 실제 인쇄에는 포함되지 않습니다. 필요 시 별도 캡처 or 복사</p>
             </div>
             <div id="answerContent" class="text-sm text-gray-700 grid md:grid-cols-2 gap-x-8 gap-y-1">
-                <!-- 정답 내용 -->
             </div>
         </section>
 
     </main>
 
-    <!-- 메인 스크립트 -->
     <script type="module">
-        // 전역 변수 설정
         let vocabularyData = [];
         let allChapters = [];
-        // *************************************************************************
-        // * 사용자님이 새로 업로드한 파일명: word_data.csv로 변경 완료
         const WORD_FILE_NAME = "word_data.csv";
-        // *************************************************************************
 
-        // DOM 요소 캐싱
         const loadingIndicator = document.getElementById('loadingOverlay');
         const chapterSelectDropdown = document.getElementById('chapterSelectDropdown');
         const chapterSelectButton = document.getElementById('chapterSelectButton');
@@ -265,13 +233,11 @@
 
         const scrollTopButton = document.getElementById('scrollTopButton');
         const scrollBottomButton = document.getElementById('scrollBottomButton');
+        const chapterSelectContainer = document.getElementById('chapterSelectContainer');
 
-        // --- 유틸 함수들 ---
-
-        /**
-         * CSV 텍스트를 파싱하여 객체 배열로 변환
-         * CSV 헤더: Chapter,Type,Word,Meaning
-         */
+        /* =======================
+           CSV 파서 (에러 방지 버전)
+           ======================= */
         function parseCSV(csvText) {
             const lines = csvText.trim().split(/\r?\n/);
             const header = lines[0].split(',').map(h => h.trim());
@@ -307,10 +273,21 @@
                 }
                 columns.push(current.trim());
 
+                // ★ 열이 4개 미만이거나 인덱스가 없으면 해당 줄은 무시
+                if (
+                    columns.length <= chapterIndex ||
+                    columns.length <= typeIndex ||
+                    columns.length <= wordIndex ||
+                    columns.length <= meaningIndex
+                ) {
+                    continue;
+                }
+
                 const chapter = parseInt(columns[chapterIndex], 10);
-                const type = columns[typeIndex];
-                const word = columns[wordIndex];
-                const meaning = columns[meaningIndex].replace(/^"|"$/g, '');
+                const type = (columns[typeIndex] ?? '').trim();
+                const word = (columns[wordIndex] ?? '').trim();
+                const rawMeaning = (columns[meaningIndex] ?? '').trim();
+                const meaning = rawMeaning.replace(/^"|"$/g, '');
 
                 if (!word || !meaning || isNaN(chapter)) continue;
 
@@ -325,9 +302,6 @@
             return data;
         }
 
-        /**
-         * 배열을 랜덤으로 섞습니다 (Fisher-Yates)
-         */
         function shuffleArray(array) {
             const arr = [...array];
             for (let i = arr.length - 1; i > 0; i--) {
@@ -337,42 +311,25 @@
             return arr;
         }
 
-        /**
-         * 에러 메시지 표시
-         */
         function displayError(message) {
-            if (!message) {
-                errorMessage.textContent = '';
-                return;
-            }
-            errorMessage.textContent = message;
-            console.error(message);
+            errorMessage.textContent = message || '';
+            if (message) console.error(message);
         }
 
-        /**
-         * 상태 메시지 표시
-         */
         function displayStatus(message) {
             statusMessage.textContent = message || '';
         }
-
-        // --- CSV 데이터 로드 ---
 
         async function loadData() {
             loadingIndicator.classList.remove('hidden');
             displayError(null);
             
             try {
-                // GitHub Pages 또는 일반 웹 환경에서 word_data.csv를 불러옵니다.
-                // index.html과 같은 경로에 word_data.csv가 있다고 가정합니다.
                 let fileUrl;
-                
-                // ChatGPT 미리보기 환경 호환
                 if (window.getFileUrl) {
                     fileUrl = window.getFileUrl(WORD_FILE_NAME);
                 } else {
-                    // 일반 브라우저 / GitHub Pages 환경
-                    fileUrl = WORD_FILE_NAME; // 예: 'word_data.csv'
+                    fileUrl = WORD_FILE_NAME;
                 }
 
                 const response = await fetch(fileUrl);
@@ -380,35 +337,29 @@
                     throw new Error(`파일을 로드하는 데 실패했습니다: ${response.statusText} (${response.status}). 파일이 올바르게 업로드되었는지 확인해주세요.`);
                 }
                 
-                // BOM 제거 후 파싱
                 let csvText = await response.text();
-                csvText = csvText.replace(/^\ufeff/, ''); // UTF-8 BOM 제거
-                
+                csvText = csvText.replace(/^\ufeff/, '');
+
                 vocabularyData = parseCSV(csvText);
 
                 if (vocabularyData.length === 0) {
                     throw new Error("CSV 파일에서 유효한 단어 데이터를 찾을 수 없습니다. 파일 내용 형식을 확인해주세요.");
                 }
                 
-                // 챕터 목록 추출 (NaN 값 제외)
                 allChapters = vocabularyData
                     .map(item => item.Chapter)
                     .filter(c => !isNaN(c));
                 
-                // 드롭다운 렌더링 및 토글 셋업
                 renderChapterDropdown();
                 setupDropdownToggle(); 
                 
-                // 버튼 활성화
                 generateButton.disabled = false;
                 
                 console.log(`총 ${vocabularyData.length}개의 단어 로드 완료. (파일: ${WORD_FILE_NAME})`);
                 
-                // 초기 테스트지 자동 생성
                 generateTestPaper();
 
             } catch (error) {
-                // 로드 실패 시 버튼 비활성화 및 오류 메시지 표시
                 generateButton.disabled = true;
                 chapterSelectButton.disabled = true;
                 selectedChaptersText.textContent = '데이터 로드 오류';
@@ -418,13 +369,7 @@
             }
         }
 
-        // --- 챕터 선택 드롭다운 렌더링 및 동작 ---
-
-        /**
-         * 챕터 목록을 기반으로 다중 선택 체크박스를 렌더링합니다.
-         */
         function renderChapterDropdown() {
-            // 중복 제거 및 정렬
             const uniqueChapters = Array.from(new Set(allChapters.filter(c => !isNaN(c))));
             const sortedChapters = uniqueChapters.sort((a, b) => a - b);
 
@@ -460,15 +405,12 @@
                 chapterCheckboxList.appendChild(wrapper);
             });
 
-            // 초기 선택 상태 텍스트 업데이트
             updateSelectedChaptersText();
 
-            // 체크박스 변경 시 텍스트 업데이트
             chapterCheckboxList.addEventListener('change', () => {
                 updateSelectedChaptersText();
             });
 
-            // "전체 선택" 버튼 동작
             selectAllChaptersButton.addEventListener('click', (e) => {
                 e.preventDefault();
                 const checkboxes = chapterCheckboxList.querySelectorAll('.chapter-checkbox');
@@ -477,13 +419,9 @@
                 updateSelectedChaptersText();
             });
 
-            // 챕터 버튼 활성화
             chapterSelectButton.disabled = false;
         }
 
-        /**
-         * 선택된 챕터 목록 텍스트 업데이트
-         */
         function updateSelectedChaptersText() {
             const selected = Array.from(document.querySelectorAll('.chapter-checkbox:checked')).map(cb => parseInt(cb.value, 10));
             if (selected.length === 0) {
@@ -494,19 +432,11 @@
                 selectedChaptersText.textContent = `선택된 챕터: ${selected.join(', ')}`;
             }
 
-            // "전체 선택" 버튼 글자도 변경
             const checkboxes = chapterCheckboxList.querySelectorAll('.chapter-checkbox');
             const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-            if (allChecked) {
-                selectAllChaptersButton.textContent = '전체 해제';
-            } else {
-                selectAllChaptersButton.textContent = '전체 선택';
-            }
+            selectAllChaptersButton.textContent = allChecked ? '전체 해제' : '전체 선택';
         }
 
-        /**
-         * 드롭다운 토글 및 외부 클릭 처리
-         */
         function setupDropdownToggle() {
             chapterSelectButton.addEventListener('click', () => {
                 const isHidden = chapterSelectDropdown.classList.contains('hidden');
@@ -524,12 +454,6 @@
             });
         }
 
-        // --- 테스트지 생성 로직 ---
-
-        /**
-         * 선택된 필터를 기반으로 단어 목록을 생성합니다.
-         * @returns {Array<Object>} 필터링 및 섞인 단어 목록
-         */
         function getFilteredAndShuffledWords() {
             const selectedChapters = Array.from(document.querySelectorAll('.chapter-checkbox:checked')).map(cb => parseInt(cb.value, 10));
             const wordType = wordTypeFilter.value;
@@ -558,9 +482,6 @@
             return shuffled.slice(0, Math.min(wordCount, shuffled.length));
         }
 
-        /**
-         * 테스트지 HTML 렌더링
-         */
         function renderTestPaper(words) {
             const testType = testTypeSelect.value;
             const showNumbering = showNumberingCheckbox.checked;
@@ -571,7 +492,6 @@
                 return;
             }
 
-            // 문제/정답 생성
             const testCells = [];
             const answers = [];
 
@@ -656,15 +576,11 @@
                 .join('');
         }
 
-        /**
-         * 테스트지 생성 메인 함수
-         */
         function generateTestPaper() {
             try {
                 displayError(null);
                 const words = getFilteredAndShuffledWords();
                 renderTestPaper(words);
-
                 displayStatus(`총 ${words.length}문항이 랜덤으로 생성되었습니다.`);
             } catch (error) {
                 displayError(error.message);
@@ -672,9 +588,6 @@
             }
         }
 
-        // --- 이벤트 리스너 등록 ---
-
-        // 스크롤 버튼 표시/숨기기
         window.addEventListener('scroll', () => {
             const scrollY = window.scrollY || document.documentElement.scrollTop;
             const docHeight = document.documentElement.scrollHeight - window.innerHeight;
@@ -700,17 +613,14 @@
             window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
         });
 
-        // 테스트지 생성 버튼
         generateButton.addEventListener('click', () => {
             generateTestPaper();
         });
 
-        // 인쇄 버튼
         printButton.addEventListener('click', () => {
             window.print();
         });
 
-        // 설정 변경 시 자동으로 상태 안내
         wordCountInput.addEventListener('change', () => {
             displayStatus('옵션이 변경되었습니다. "테스트지 생성" 버튼을 눌러 새로 생성하세요.');
         });
@@ -724,7 +634,6 @@
             displayStatus('옵션이 변경되었습니다. "테스트지 생성" 버튼을 눌러 새로 생성하세요.');
         });
 
-        // 초기 데이터 로드
         window.addEventListener('DOMContentLoaded', () => {
             loadData();
         });
