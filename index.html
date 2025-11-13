@@ -189,8 +189,8 @@
         let vocabularyData = [];
         let allChapters = [];
         // *************************************************************************
-        // * 파일명을 사용자님의 요청에 따라 'word.csv'로 재수정했습니다.
-        const WORD_FILE_NAME = "word.csv";
+        // * 오류 해결을 위해, 현재 이 환경에 업로드되어 접근 가능한 실제 파일명으로 재수정했습니다.
+        const WORD_FILE_NAME = "전체어휘 엑셀통합본_최종파일_수정 완료 - 단어테스트용.csv";
         // *************************************************************************
 
         // DOM 요소 캐싱
@@ -229,7 +229,6 @@
 
             for (let i = 1; i < lines.length; i++) {
                 // 따옴표로 묶인 내용(쉼표 포함 가능)을 포함하여 행을 안정적으로 파싱합니다.
-                // 이 정규식은 쉼표를 기준으로 분할하되, 따옴표 안에 있는 쉼표는 무시합니다.
                 const row = lines[i].match(/(".*?"|[^",\n\r]+)(?:\s*,|\s*$)/g)?.map(item => item.trim().replace(/,$/, ''));
 
                 if (row && row.length === headers.length) {
@@ -317,7 +316,7 @@
             document.querySelectorAll('.chapter-checkbox').forEach(checkbox => {
                 checkbox.addEventListener('change', () => {
                     updateSelectedChaptersText();
-                    generateTestPaper(); // 챕터 선택 변경 시 미리보기 자동 업데이트
+                    generateTestPaper(); 
                 });
             });
             updateSelectedChaptersText();
@@ -333,7 +332,7 @@
                 checkbox.checked = isChecked;
             });
             updateSelectedChaptersText();
-            generateTestPaper(); // 전체 선택 변경 시 미리보기 자동 업데이트
+            generateTestPaper(); 
         }
 
         /**
@@ -364,14 +363,11 @@
         function setupDropdownToggle() {
             let isDropdownOpen = false;
 
-            // 이벤트 리스너를 한 번만 연결
             if (!chapterSelectButton.hasAttribute('data-listener-added')) {
                 chapterSelectButton.addEventListener('click', (e) => {
                     e.stopPropagation();
                     
-                    // 데이터 로드 확인
                     if (allChapters.length === 0) {
-                        // 데이터가 없으면 토글 방지 및 오류 메시지 표시
                         displayError('챕터 데이터를 찾을 수 없어 드롭다운을 열 수 없습니다. 파일 로드 상태를 확인해주세요.');
                         return; 
                     }
@@ -389,7 +385,6 @@
                 chapterSelectButton.setAttribute('data-listener-added', 'true');
             }
             
-            // 데이터 로드가 성공적으로 완료되면 버튼 활성화
             if (allChapters.length > 0) {
                 chapterSelectButton.disabled = false;
                 updateSelectedChaptersText(); 
@@ -410,11 +405,12 @@
             displayError(null);
             
             try {
-                // window.getFileUrl이 word.csv를 찾도록 수정
+                // 정확히 업로드된 파일명을 사용하여 파일 경로를 가져옵니다.
                 const fileUrl = window.getFileUrl ? window.getFileUrl(WORD_FILE_NAME) : null;
 
                 if (!fileUrl) {
-                    throw new Error(`파일 URL을 가져올 수 없습니다. 파일이 업로드되었는지 확인하거나, 파일명('${WORD_FILE_NAME}')이 정확한지 확인해 주세요.`);
+                    // 파일명 불일치로 인한 오류 메시지 강화
+                    throw new Error(`파일 URL을 가져올 수 없습니다. 현재 시스템에 인식된 파일명: '${WORD_FILE_NAME}'으로 요청했으나 경로를 찾을 수 없습니다. 파일이 올바른 이름으로 업로드되었는지 확인해주세요.`);
                 }
 
                 const response = await fetch(fileUrl);
@@ -474,7 +470,6 @@
             if (vocabularyData.length === 0) return [];
             
             if (selectedChapters.length === 0) {
-                // 오류는 generateTestPaper에서 표시하므로 여기서는 조용히 처리
                 return [];
             }
 
@@ -484,7 +479,6 @@
                 let typeMatch = true;
                 
                 if (wordType !== 'all') {
-                    // '표제어만' 선택 시: Type이 '표제어'인 경우만
                     typeMatch = word.Type === wordType;
                 }
 
@@ -492,7 +486,6 @@
             });
             
             if (filteredWords.length === 0) {
-                // 오류는 generateTestPaper에서 표시하므로 여기서는 조용히 처리
                 return [];
             }
 
@@ -516,15 +509,12 @@
             const selectedWords = getFilteredAndShuffledWords();
             const quizType = quizTypeSelect.value;
             
-            // 선택된 챕터 텍스트 가져오기
             const allChapterCheckboxes = document.querySelectorAll('.chapter-checkbox');
             const selectedChapterValues = Array.from(document.querySelectorAll('.chapter-checkbox:checked')).map(cb => cb.value);
             const selectedChaptersTextContent = (selectedChapterValues.length === allChapterCheckboxes.length && allChapterCheckboxes.length > 0) ? '전체 챕터' : selectedChapterValues.join(', ');
 
             if (selectedWords.length === 0) {
-                // 단어 부족 또는 미선택 오류 처리
                 if (vocabularyData.length === 0) {
-                     // 이미 loadData에서 에러가 표시됨
                 } else if (selectedChapterValues.length === 0) {
                     displayError('테스트지를 생성하려면 하나 이상의 챕터를 선택해야 합니다.');
                 } else {
