@@ -188,7 +188,10 @@
         // 전역 변수 설정
         let vocabularyData = [];
         let allChapters = [];
+        // *************************************************************************
+        // * 파일명을 사용자님의 요청에 따라 'word.csv'로 재수정했습니다.
         const WORD_FILE_NAME = "word.csv";
+        // *************************************************************************
 
         // DOM 요소 캐싱
         const loadingIndicator = document.getElementById('loadingIndicator');
@@ -216,16 +219,17 @@
          * @returns {Array<Object>} 파싱된 단어 객체 배열
          */
         function parseCSV(csvText) {
-            const lines = csvText.split('\r\n').filter(line => line.trim() !== ''); // 빈 줄 제거
+            // \r\n (Windows), \n (Linux/macOS) 모두 처리
+            const lines = csvText.split(/\r?\n/).filter(line => line.trim() !== ''); 
             if (lines.length === 0) return [];
 
-            // 헤더: Chapter,Type,Word,Meaning
+            // 헤더: Chapter,Type,Word,Meaning (이 파일의 헤더 형식에 맞춤)
             const headers = lines[0].split(',');
             const data = [];
 
             for (let i = 1; i < lines.length; i++) {
-                // 더 안정적인 CSV 파싱을 위해 정규식을 사용하여 콤마가 포함된 따옴표로 묶인 문자열도 처리
-                // match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g)
+                // 따옴표로 묶인 내용(쉼표 포함 가능)을 포함하여 행을 안정적으로 파싱합니다.
+                // 이 정규식은 쉼표를 기준으로 분할하되, 따옴표 안에 있는 쉼표는 무시합니다.
                 const row = lines[i].match(/(".*?"|[^",\n\r]+)(?:\s*,|\s*$)/g)?.map(item => item.trim().replace(/,$/, ''));
 
                 if (row && row.length === headers.length) {
@@ -271,7 +275,6 @@
                 errorMessageDiv.classList.add('hidden');
                 errorText.textContent = '';
             }
-            // 로딩 인디케이터는 오류와 관계없이 로직 흐름에 따라 제어
         }
         
         // --- 챕터 드롭다운 제어 함수 ---
@@ -280,13 +283,13 @@
          * 챕터 목록을 드롭다운에 렌더링합니다.
          */
         function renderChapterDropdown() {
-            if (allChapters.length === 0) {
+            // 중복 제거된 챕터 목록을 정렬
+            const sortedChapters = [...new Set(allChapters)].sort((a, b) => a - b);
+            
+            if (sortedChapters.length === 0) {
                 chapterSelectDropdown.innerHTML = '<div class="px-4 py-2 text-sm text-gray-500">챕터 데이터가 없습니다.</div>';
                 return;
             }
-
-            // 중복 제거된 챕터 목록을 정렬
-            const sortedChapters = [...new Set(allChapters)].sort((a, b) => a - b);
             
             // 드롭다운 내용 생성
             let html = `
@@ -312,7 +315,10 @@
             // 이벤트 리스너 연결
             document.getElementById('selectAllChapters').addEventListener('change', handleSelectAll);
             document.querySelectorAll('.chapter-checkbox').forEach(checkbox => {
-                checkbox.addEventListener('change', updateSelectedChaptersText);
+                checkbox.addEventListener('change', () => {
+                    updateSelectedChaptersText();
+                    generateTestPaper(); // 챕터 선택 변경 시 미리보기 자동 업데이트
+                });
             });
             updateSelectedChaptersText();
         }
@@ -327,6 +333,7 @@
                 checkbox.checked = isChecked;
             });
             updateSelectedChaptersText();
+            generateTestPaper(); // 전체 선택 변경 시 미리보기 자동 업데이트
         }
 
         /**
@@ -347,41 +354,45 @@
                 selectedChaptersText.textContent = `${checkedBoxes.length}개의 챕터 선택됨`;
                 if (selectAllCheckbox) selectAllCheckbox.checked = false;
             } else {
-                 selectedChaptersText.textContent = '데이터 로드 중...'; // 초기 상태 또는 로드 실패 시
+                 selectedChaptersText.textContent = '데이터 로드 중...';
             }
         }
         
         /**
          * 드롭다운 토글 및 외부 클릭 처리
-         * **수정:** 챕터 데이터가 로드된 후에만 클릭 이벤트가 동작하도록 안정성을 강화
          */
         function setupDropdownToggle() {
             let isDropdownOpen = false;
 
-            chapterSelectButton.addEventListener('click', (e) => {
-                e.stopPropagation();
+            // 이벤트 리스너를 한 번만 연결
+            if (!chapterSelectButton.hasAttribute('data-listener-added')) {
+                chapterSelectButton.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    
+                    // 데이터 로드 확인
+                    if (allChapters.length === 0) {
+                        // 데이터가 없으면 토글 방지 및 오류 메시지 표시
+                        displayError('챕터 데이터를 찾을 수 없어 드롭다운을 열 수 없습니다. 파일 로드 상태를 확인해주세요.');
+                        return; 
+                    }
+
+                    isDropdownOpen = !isDropdownOpen;
+                    chapterSelectDropdown.style.display = isDropdownOpen ? 'block' : 'none';
+                });
                 
-                // 데이터 로드 확인
-                if (allChapters.length === 0) {
-                    displayError('챕터 데이터를 찾을 수 없습니다. 파일 로드 상태를 확인해주세요.');
-                    return; 
-                }
-
-                isDropdownOpen = !isDropdownOpen;
-                chapterSelectDropdown.style.display = isDropdownOpen ? 'block' : 'none';
-            });
-
-            document.addEventListener('click', (e) => {
-                if (!chapterSelectContainer.contains(e.target) && isDropdownOpen) {
-                    isDropdownOpen = false;
-                    chapterSelectDropdown.style.display = 'none';
-                }
-            });
+                document.addEventListener('click', (e) => {
+                    if (!chapterSelectContainer.contains(e.target) && isDropdownOpen) {
+                        isDropdownOpen = false;
+                        chapterSelectDropdown.style.display = 'none';
+                    }
+                });
+                chapterSelectButton.setAttribute('data-listener-added', 'true');
+            }
             
             // 데이터 로드가 성공적으로 완료되면 버튼 활성화
             if (allChapters.length > 0) {
                 chapterSelectButton.disabled = false;
-                updateSelectedChaptersText(); // 최종 텍스트 업데이트
+                updateSelectedChaptersText(); 
             } else {
                 chapterSelectButton.disabled = true;
                 selectedChaptersText.textContent = '챕터 로드 실패';
@@ -399,15 +410,16 @@
             displayError(null);
             
             try {
+                // window.getFileUrl이 word.csv를 찾도록 수정
                 const fileUrl = window.getFileUrl ? window.getFileUrl(WORD_FILE_NAME) : null;
 
                 if (!fileUrl) {
-                    throw new Error("파일 URL을 가져올 수 없습니다. 파일이 업로드되었는지 확인하거나, 파일명('"+WORD_FILE_NAME+"')이 정확한지 확인해 주세요.");
+                    throw new Error(`파일 URL을 가져올 수 없습니다. 파일이 업로드되었는지 확인하거나, 파일명('${WORD_FILE_NAME}')이 정확한지 확인해 주세요.`);
                 }
 
                 const response = await fetch(fileUrl);
                 if (!response.ok) {
-                    throw new Error(`파일을 로드하는 데 실패했습니다: ${response.statusText}`);
+                    throw new Error(`파일을 로드하는 데 실패했습니다: ${response.statusText} (${response.status})`);
                 }
                 
                 // BOM 제거 후 파싱
@@ -420,10 +432,10 @@
                     throw new Error("CSV 파일에서 유효한 단어 데이터를 찾을 수 없습니다. 파일 내용 형식을 확인해주세요.");
                 }
                 
-                // 챕터 목록 추출 및 초기화
+                // 챕터 목록 추출 및 초기화 (NaN 값 필터링)
                 allChapters = vocabularyData
                     .map(item => item.Chapter)
-                    .filter(c => !isNaN(c)); // 유효한 숫자 챕터만 필터링
+                    .filter(c => !isNaN(c)); 
 
                 // 챕터 드롭다운 렌더링 및 클릭 이벤트 설정
                 renderChapterDropdown();
@@ -432,7 +444,10 @@
                 // 로드 완료 후 버튼 활성화
                 generateButton.disabled = false;
                 
-                console.log(`총 ${vocabularyData.length}개의 단어 로드 완료.`);
+                console.log(`총 ${vocabularyData.length}개의 단어 로드 완료. (파일: ${WORD_FILE_NAME})`);
+                
+                // 초기 테스트지 생성 (데이터 로드 후 자동 실행)
+                generateTestPaper();
 
             } catch (error) {
                 // 로드 실패 시 버튼 비활성화 및 오류 메시지 표시
@@ -456,8 +471,10 @@
             const wordType = wordTypeFilter.value;
             const wordCount = parseInt(wordCountInput.value, 10);
 
+            if (vocabularyData.length === 0) return [];
+            
             if (selectedChapters.length === 0) {
-                displayError('테스트지를 생성하려면 하나 이상의 챕터를 선택해야 합니다.');
+                // 오류는 generateTestPaper에서 표시하므로 여기서는 조용히 처리
                 return [];
             }
 
@@ -475,7 +492,7 @@
             });
             
             if (filteredWords.length === 0) {
-                displayError('선택된 챕터 및 단어 유형 기준으로 일치하는 단어가 없습니다. 필터를 조정해 주세요.');
+                // 오류는 generateTestPaper에서 표시하므로 여기서는 조용히 처리
                 return [];
             }
 
@@ -484,11 +501,6 @@
 
             // 3. 테스트 개수만큼 자르기 (wordCount 초과 방지)
             const finalWords = shuffledWords.slice(0, Math.min(wordCount, shuffledWords.length));
-            
-            if (finalWords.length === 0) {
-                 displayError('테스트 단어 개수를 설정할 수 없습니다. (필터링된 단어: 0개)');
-                 return [];
-            }
             
             return finalWords;
         }
@@ -503,12 +515,23 @@
 
             const selectedWords = getFilteredAndShuffledWords();
             const quizType = quizTypeSelect.value;
-            const wordCount = parseInt(wordCountInput.value, 10);
             
+            // 선택된 챕터 텍스트 가져오기
+            const allChapterCheckboxes = document.querySelectorAll('.chapter-checkbox');
             const selectedChapterValues = Array.from(document.querySelectorAll('.chapter-checkbox:checked')).map(cb => cb.value);
-            const selectedChaptersTextContent = selectedChapterValues.length === document.querySelectorAll('.chapter-checkbox').length ? '전체 챕터' : selectedChapterValues.join(', ');
+            const selectedChaptersTextContent = (selectedChapterValues.length === allChapterCheckboxes.length && allChapterCheckboxes.length > 0) ? '전체 챕터' : selectedChapterValues.join(', ');
 
             if (selectedWords.length === 0) {
+                // 단어 부족 또는 미선택 오류 처리
+                if (vocabularyData.length === 0) {
+                     // 이미 loadData에서 에러가 표시됨
+                } else if (selectedChapterValues.length === 0) {
+                    displayError('테스트지를 생성하려면 하나 이상의 챕터를 선택해야 합니다.');
+                } else {
+                    displayError('선택된 필터 기준으로 출제할 수 있는 단어가 부족하거나 없습니다. 필터를 조정해 주세요.');
+                }
+                testPaperDiv.innerHTML = '<p class="text-center text-gray-500 py-10">테스트지를 생성할 수 없습니다. 오류 메시지를 확인하거나 옵션을 조정하세요.</p>';
+                answerPaperDiv.classList.add('hidden');
                 generateButton.disabled = false;
                 return;
             }
@@ -536,7 +559,7 @@
                 </div>
                 <div class="text-sm text-gray-600 mb-4">
                     <p><strong>대상 챕터:</strong> ${selectedChaptersTextContent}</p>
-                    <p><strong>출제 개수:</strong> ${selectedWords.length}개</p>
+                    <p><strong>출제 개수:</strong> ${selectedWords.length}개 (요청 개수: ${wordCountInput.value}개)</p>
                 </div>
                 <table class="min-w-full divide-y divide-gray-200 border border-gray-300">
                     <thead class="bg-gray-50">
@@ -620,9 +643,9 @@
             generateButton.addEventListener('click', generateTestPaper);
             printButton.addEventListener('click', printPaper);
             paperSizeSelect.addEventListener('change', generateTestPaper);
-            
-            // 초기 미리보기 생성 (옵션: 데이터 로드 후 실행됨)
-            // generateTestPaper();
+            wordTypeFilter.addEventListener('change', generateTestPaper);
+            wordCountInput.addEventListener('change', generateTestPaper);
+            quizTypeSelect.addEventListener('change', generateTestPaper);
         };
 
     </script>
