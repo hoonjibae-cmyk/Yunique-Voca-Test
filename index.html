@@ -23,167 +23,218 @@
             body {
                 margin: 0;
                 padding: 0;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
             }
-            .controls, .print-button {
+
+            /* 인쇄 시 컨트롤 패널, 헤더 등은 숨기기 */
+            .no-print,
+            .controls,
+            .header,
+            #scrollTopButton,
+            #scrollBottomButton {
                 display: none !important;
             }
-            .paper-container {
-                box-shadow: none !important;
-                border: none !important;
-                margin: 0;
-                padding: 1cm; /* 인쇄 여백 */
-                width: 100%;
-                min-height: auto;
+
+            /* A4 크기 설정 */
+            @page {
+                size: A4;
+                margin: 10mm;
             }
-            .test-paper table {
-                page-break-inside: auto;
-                width: 100%;
+
+            .print-area {
+                page-break-after: always;
             }
-            .test-paper tr {
+
+            /* 각 문제 블록 사이 여백 조정 */
+            .question-block {
                 page-break-inside: avoid;
-                page-break-after: auto;
             }
-            .test-paper th, .test-paper td {
-                padding: 5px;
+
+            /* A4 한 페이지에 가로 2단, 세로 여러 줄로 보이도록 레이아웃 조정 */
+            .test-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px 16px;
             }
-            .test-paper h1 {
-                font-size: 1.5em;
+
+            .test-cell {
+                border: 1px solid #000;
+                padding: 6px;
+                min-height: 60px;
             }
         }
-        /* 다중 선택 드롭다운 스타일 */
-        .multi-select-container {
-            position: relative;
+
+        /* 일반 화면용 레이아웃 */
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px 16px;
         }
-        .multi-select-dropdown {
-            display: none;
-            position: absolute;
-            background-color: white;
-            border: 1px solid #ccc;
+
+        .test-cell {
+            border: 1px solid #e5e7eb;
             border-radius: 0.5rem;
-            z-index: 10;
-            max-height: 200px;
-            overflow-y: auto;
-            width: 100%;
-            padding: 0.5rem 0;
-            top: 100%; /* 버튼 바로 아래 위치 */
-            margin-top: 0.25rem;
+            padding: 10px;
+            background-color: #ffffff;
         }
-        .multi-select-dropdown label {
-            display: block;
-            padding: 0.25rem 1rem;
-            cursor: pointer;
-            transition: background-color 0.2s;
+
+        /* 스크롤 이동 버튼 */
+        #scrollTopButton,
+        #scrollBottomButton {
+            position: fixed;
+            right: 1.25rem;
+            z-index: 50;
         }
-        .multi-select-dropdown label:hover {
-            background-color: #f3f4f6;
+
+        #scrollTopButton {
+            bottom: 4.5rem;
         }
-        .multi-select-button {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+
+        #scrollBottomButton {
+            bottom: 1.25rem;
         }
-        .multi-select-button:disabled {
-            background-color: #f3f4f6;
-            color: #9ca3af;
-            cursor: not-allowed;
+
+        /* 로딩 오버레이 */
+        #loadingOverlay {
+            backdrop-filter: blur(4px);
         }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen p-4 flex flex-col items-center font-sans">
+<body class="bg-gray-100 font-sans">
 
-    <div id="loadingIndicator" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <!-- 상단 헤더 -->
+    <header class="header bg-white shadow-sm sticky top-0 z-30">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <span class="text-lg font-bold text-blue-600">목동유쌤영어학원</span>
+                <span class="text-gray-400">|</span>
+                <span class="text-sm text-gray-600">A4 출력용 랜덤 단어 테스트지 생성기</span>
+            </div>
+            <div class="flex items-center space-x-2 text-xs text-gray-400">
+                <span>CSV 기반 자동 생성</span>
+                <span>·</span>
+                <span>GitHub Pages 호환</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- 스크롤 이동 버튼 -->
+    <button id="scrollTopButton" class="no-print bg-blue-600 text-white rounded-full p-3 shadow-lg hover:bg-blue-700 transition hidden" aria-label="맨 위로">
+        ▲
+    </button>
+    <button id="scrollBottomButton" class="no-print bg-blue-600 text-white rounded-full p-3 shadow-lg hover:bg-blue-700 transition hidden" aria-label="맨 아래로">
+        ▼
+    </button>
+
+    <!-- 로딩 오버레이 -->
+    <div id="loadingOverlay" class="fixed inset-0 flex items-center justify-center z-50 hidden">
         <div class="text-white text-xl p-4 bg-blue-600 rounded-lg shadow-lg">데이터 로딩 중...</div>
     </div>
 
-    <!-- 제어판 (Controls) -->
-    <div class="controls w-full max-w-4xl bg-white p-6 rounded-xl shadow-lg mb-6 sticky top-4 z-20">
-        <h1 class="text-2xl font-bold text-gray-800 mb-4">단어 테스트지 생성 옵션</h1>
-        
-        <div class="grid md:grid-cols-3 gap-4">
+    <!-- 메인 컨테이너 -->
+    <main class="max-w-6xl mx-auto px-4 py-6">
+
+        <!-- 제어판 (Controls) -->
+        <div class="controls w-full max-w-4xl bg-white p-6 rounded-xl shadow-lg mb-6 sticky top-4 z-20">
+            <h1 class="text-2xl font-bold text-gray-800 mb-4">단어 테스트지 생성 옵션</h1>
             
-            <!-- 챕터 다중 선택 -->
-            <div class="multi-select-container" id="chapterSelectContainer">
-                <label for="chapterSelectButton" class="block text-sm font-medium text-gray-700 mb-1">챕터 선택 (다중 선택 가능)</label>
-                <!-- 챕터 로드 전까지 비활성화 -->
-                <button id="chapterSelectButton" disabled class="multi-select-button w-full bg-white border border-gray-300 rounded-lg shadow-sm px-4 py-2 text-left text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition ease-in-out duration-150 disabled:bg-gray-200 disabled:text-gray-500 disabled:cursor-not-allowed">
-                    <span id="selectedChaptersText">데이터 로드 중...</span>
-                    <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                    </svg>
-                </button>
-                <div id="chapterSelectDropdown" class="multi-select-dropdown">
-                    <!-- 챕터 체크박스가 여기에 로드됩니다 -->
+            <div class="grid md:grid-cols-3 gap-4">
+                
+                <!-- 챕터 다중 선택 -->
+                <div class="multi-select-container" id="chapterSelectContainer">
+                    <label for="chapterSelectButton" class="block text-sm font-medium text-gray-700 mb-1">챕터 선택 (다중 선택 가능)</label>
+                    <!-- 챕터 로드 전까지 비활성화 -->
+                    <button id="chapterSelectButton" disabled class="w-full flex justify-between items-center border border-gray-300 rounded-md px-3 py-2 bg-gray-50 text-sm text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-200 disabled:text-gray-500 disabled:cursor-not-allowed">
+                        <span id="selectedChaptersText">데이터 로드 중...</span>
+                        <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                    <!-- 드롭다운 -->
+                    <div id="chapterSelectDropdown" class="absolute mt-1 w-72 bg-white border border-gray-200 rounded-md shadow-lg z-30 hidden max-h-60 overflow-y-auto">
+                        <div class="px-3 py-2 border-b border-gray-100 flex items-center justify-between">
+                            <span class="text-xs text-gray-500">원하는 챕터를 모두 선택하세요.</span>
+                            <button id="selectAllChapters" class="text-xs text-blue-600 hover:underline">전체 선택</button>
+                        </div>
+                        <div id="chapterCheckboxList" class="py-1 text-sm text-gray-700 max-h-48 overflow-y-auto">
+                            <!-- JS로 채워짐 -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 단어 수 설정 -->
+                <div>
+                    <label for="wordCount" class="block text-sm font-medium text-gray-700 mb-1">문항 수 (1~200)</label>
+                    <input type="number" id="wordCount" min="1" max="200" value="40" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <p class="mt-1 text-xs text-gray-400">A4 기준 40~60문항 추천</p>
+                </div>
+
+                <!-- 문제 유형 설정 -->
+                <div>
+                    <label for="testType" class="block text-sm font-medium text-gray-700 mb-1">문제 유형</label>
+                    <select id="testType" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="word-to-meaning">영어 → 뜻 쓰기</option>
+                        <option value="meaning-to-word">뜻 → 영어 쓰기</option>
+                        <option value="mixed">섞어서 출제</option>
+                    </select>
                 </div>
             </div>
 
-            <!-- 단어 유형 필터 (표제어/연관어) -->
-            <div>
-                <label for="wordTypeFilter" class="block text-sm font-medium text-gray-700 mb-1">단어 유형 필터</label>
-                <select id="wordTypeFilter" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-lg shadow-sm">
-                    <option value="all">표제어 + 연관어 모두</option>
-                    <option value="표제어" selected>표제어만</option>
-                </select>
+            <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center space-x-3">
+                    <!-- 표제어/파생어 필터 -->
+                    <div class="flex items-center space-x-2">
+                        <label class="text-xs font-medium text-gray-700">단어 유형:</label>
+                        <select id="wordTypeFilter" class="border border-gray-300 rounded-md px-2 py-1 text-xs shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="all">전체</option>
+                            <option value="표제어">표제어만</option>
+                            <option value="파생어">파생어만</option>
+                        </select>
+                    </div>
+
+                    <!-- 보기 번호 표시 옵션 -->
+                    <div class="flex items-center space-x-1">
+                        <input type="checkbox" id="showNumbering" class="h-4 w-4 text-blue-600 border-gray-300 rounded">
+                        <label for="showNumbering" class="text-xs text-gray-700">문항 번호 표시</label>
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-2">
+                    <button id="generateButton" class="no-print inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:bg-gray-300 disabled:cursor-not-allowed">
+                        테스트지 생성
+                    </button>
+                    <button id="printButton" class="no-print inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
+                        인쇄하기 (Ctrl+P)
+                    </button>
+                </div>
             </div>
 
-            <!-- 테스트 개수 -->
-            <div>
-                <label for="wordCount" class="block text-sm font-medium text-gray-700 mb-1">테스트 단어 개수</label>
-                <input type="number" id="wordCount" value="20" min="5" max="100" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-2.5">
-            </div>
-
-            <!-- 테스트 유형 선택 (단어/뜻) -->
-            <div>
-                <label for="quizType" class="block text-sm font-medium text-gray-700 mb-1">테스트 유형</label>
-                <select id="quizType" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-lg shadow-sm">
-                    <option value="wordToMeaning">단어 보고 뜻 쓰기</option>
-                    <option value="meaningToWord">뜻 보고 단어 쓰기</option>
-                </select>
-            </div>
-            
-            <!-- 용지 종류 선택 -->
-            <div>
-                <label for="paperSize" class="block text-sm font-medium text-gray-700 mb-1">용지 크기</label>
-                <select id="paperSize" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-lg shadow-sm">
-                    <option value="A4">A4 (210mm x 297mm)</option>
-                    <option value="Letter">Letter (216mm x 279mm)</option>
-                </select>
-            </div>
-
-            <!-- 버튼 영역 -->
-            <div class="md:col-span-3 flex justify-end space-x-3 mt-4">
-                <button id="generateButton" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 ease-in-out" disabled>
-                    테스트지 생성
-                </button>
-            </div>
+            <!-- 상태/에러 메시지 -->
+            <div id="statusMessage" class="mt-3 text-xs text-gray-500"></div>
+            <div id="errorMessage" class="mt-1 text-xs text-red-500"></div>
         </div>
-    </div>
 
-    <!-- 오류 메시지 -->
-    <div id="errorMessage" class="w-full max-w-4xl p-4 bg-red-100 text-red-700 border border-red-400 rounded-lg hidden mb-6" role="alert">
-        <p class="font-bold">오류 발생:</p>
-        <p id="errorText"></p>
-    </div>
+        <!-- 테스트지 출력 영역 -->
+        <section id="testPaper" class="print-area bg-white p-6 rounded-xl shadow-md">
+            <!-- 실제 문제 내용이 JS로 그려짐 -->
+            <div class="text-center text-gray-400 text-sm">CSV 데이터를 로딩 중입니다...</div>
+        </section>
 
-    <!-- 테스트지 미리보기 컨테이너 -->
-    <div id="paperContainer" class="paper-container w-full max-w-4xl bg-white shadow-2xl rounded-xl transition duration-300 ease-in-out">
-        <div id="testPaper" class="test-paper p-8">
-            <!-- 테스트지가 여기에 렌더링됩니다 -->
-            <p class="text-center text-gray-500">테스트지 생성 버튼을 눌러 미리보기를 확인하세요.</p>
-        </div>
-        <div id="answerPaper" class="test-paper p-8 hidden border-t border-dashed mt-4 pt-8">
-            <!-- 정답지가 여기에 렌더링됩니다 -->
-        </div>
-    </div>
+        <!-- 정답지 영역 (선택적으로 화면에만 표시) -->
+        <section id="answerSheet" class="no-print mt-6 bg-white p-4 rounded-xl shadow-md">
+            <div class="flex items-center justify-between mb-2">
+                <h2 class="text-lg font-semibold text-gray-800">정답지 (미리보기용)</h2>
+                <p class="text-xs text-gray-400">※ 실제 인쇄에는 포함되지 않습니다. 필요 시 별도 캡처 or 복사</p>
+            </div>
+            <div id="answerContent" class="text-sm text-gray-700 grid md:grid-cols-2 gap-x-8 gap-y-1">
+                <!-- 정답 내용 -->
+            </div>
+        </section>
 
-    <!-- 인쇄 버튼 -->
-    <div class="print-button w-full max-w-4xl mt-6 flex justify-end">
-        <button id="printButton" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-150 ease-in-out" disabled>
-            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m4 1v.01M10 13l2-2 2 2M7 17h10a2 2 0 002-2V9a2 2 0 00-2-2H7a2 2 0 00-2 2v6a2 2 0 002 2z"></path></svg>
-            테스트지 인쇄
-        </button>
-    </div>
+    </main>
 
-
+    <!-- 메인 스크립트 -->
     <script type="module">
         // 전역 변수 설정
         let vocabularyData = [];
@@ -194,230 +245,134 @@
         // *************************************************************************
 
         // DOM 요소 캐싱
-        const loadingIndicator = document.getElementById('loadingIndicator');
+        const loadingIndicator = document.getElementById('loadingOverlay');
         const chapterSelectDropdown = document.getElementById('chapterSelectDropdown');
         const chapterSelectButton = document.getElementById('chapterSelectButton');
-        const chapterSelectContainer = document.getElementById('chapterSelectContainer');
+        const chapterCheckboxList = document.getElementById('chapterCheckboxList');
+        const selectAllChaptersButton = document.getElementById('selectAllChapters');
         const selectedChaptersText = document.getElementById('selectedChaptersText');
-        const wordTypeFilter = document.getElementById('wordTypeFilter');
         const wordCountInput = document.getElementById('wordCount');
-        const quizTypeSelect = document.getElementById('quizType');
-        const paperSizeSelect = document.getElementById('paperSize');
-        const paperContainer = document.getElementById('paperContainer');
-        const testPaperDiv = document.getElementById('testPaper');
-        const answerPaperDiv = document.getElementById('answerPaper');
+        const testTypeSelect = document.getElementById('testType');
+        const wordTypeFilter = document.getElementById('wordTypeFilter');
+        const showNumberingCheckbox = document.getElementById('showNumbering');
         const generateButton = document.getElementById('generateButton');
         const printButton = document.getElementById('printButton');
-        const errorMessageDiv = document.getElementById('errorMessage');
-        const errorText = document.getElementById('errorText');
-        
-        // --- 유틸리티 함수 ---
+        const statusMessage = document.getElementById('statusMessage');
+        const errorMessage = document.getElementById('errorMessage');
+        const testPaper = document.getElementById('testPaper');
+        const answerSheet = document.getElementById('answerSheet');
+        const answerContent = document.getElementById('answerContent');
+
+        const scrollTopButton = document.getElementById('scrollTopButton');
+        const scrollBottomButton = document.getElementById('scrollBottomButton');
+
+        // --- 유틸 함수들 ---
 
         /**
-         * CSV 데이터를 파싱하여 단어 배열을 반환합니다.
-         * @param {string} csvText - CSV 파일의 내용
-         * @returns {Array<Object>} 파싱된 단어 객체 배열
+         * CSV 텍스트를 파싱하여 객체 배열로 변환
+         * CSV 헤더: Chapter,Type,Word,Meaning
          */
         function parseCSV(csvText) {
-            // \r\n (Windows), \n (Linux/macOS) 모두 처리
-            const lines = csvText.split(/\r?\n/).filter(line => line.trim() !== ''); 
-            if (lines.length === 0) return [];
+            const lines = csvText.trim().split(/\r?\n/);
+            const header = lines[0].split(',').map(h => h.trim());
 
-            // 헤더: Chapter,Type,Word,Meaning (이 파일의 헤더 형식에 맞춤)
-            const headers = lines[0].split(',');
+            const chapterIndex = header.indexOf('Chapter');
+            const typeIndex = header.indexOf('Type');
+            const wordIndex = header.indexOf('Word');
+            const meaningIndex = header.indexOf('Meaning');
+
+            if ([chapterIndex, typeIndex, wordIndex, meaningIndex].includes(-1)) {
+                throw new Error("CSV 헤더에 Chapter, Type, Word, Meaning 중 누락된 항목이 있습니다.");
+            }
+
             const data = [];
 
             for (let i = 1; i < lines.length; i++) {
-                // 따옴표로 묶인 내용(쉼표 포함 가능)을 포함하여 행을 안정적으로 파싱합니다.
-                // 정규식: 따옴표로 묶인 문자열 (내부 쉼표 허용) 또는 따옴표 없는 문자열(쉼표 제외)을 찾고, 뒤에 쉼표나 끝이 오도록 합니다.
-                const row = lines[i].match(/(".*?"|[^",\n\r]+)(?:\s*,|\s*$)/g)?.map(item => {
-                    // 각 항목의 앞뒤 공백 제거 및 끝에 붙은 쉼표 제거
-                    let cleanedItem = item.trim().replace(/,$/, '');
-                    // 따옴표 제거 (따옴표로 묶여있다면)
-                    if (cleanedItem.startsWith('"') && cleanedItem.endsWith('"')) {
-                        cleanedItem = cleanedItem.substring(1, cleanedItem.length - 1);
+                const line = lines[i].trim();
+                if (!line) continue;
+
+                const columns = [];
+                let current = '';
+                let insideQuotes = false;
+
+                for (let char of line) {
+                    if (char === '"') {
+                        insideQuotes = !insideQuotes;
+                    } else if (char === ',' && !insideQuotes) {
+                        columns.push(current.trim());
+                        current = '';
+                    } else {
+                        current += char;
                     }
-                    return cleanedItem;
-                });
-
-                if (row && row.length === headers.length) {
-                    const obj = {};
-                    obj[headers[0]] = row[0].trim(); // Chapter (챕터)
-                    obj[headers[1]] = row[1].trim(); // Type (표제어/연관어)
-                    obj[headers[2]] = row[2].trim(); // Word (단어)
-                    obj[headers[3]] = row[3].trim(); // Meaning (뜻)
-
-                    // 챕터는 숫자로 변환
-                    obj.Chapter = parseInt(obj.Chapter, 10);
-                    
-                    data.push(obj);
                 }
+                columns.push(current.trim());
+
+                const chapter = parseInt(columns[chapterIndex], 10);
+                const type = columns[typeIndex];
+                const word = columns[wordIndex];
+                const meaning = columns[meaningIndex].replace(/^"|"$/g, '');
+
+                if (!word || !meaning || isNaN(chapter)) continue;
+
+                data.push({
+                    Chapter: chapter,
+                    Type: type,
+                    Word: word,
+                    Meaning: meaning
+                });
             }
+
             return data;
         }
 
         /**
-         * 배열을 무작위로 섞는 Fisher-Yates 알고리즘
-         * @param {Array} array - 섞을 배열
-         * @returns {Array} 섞인 배열
+         * 배열을 랜덤으로 섞습니다 (Fisher-Yates)
          */
         function shuffleArray(array) {
-            for (let i = array.length - 1; i > 0; i--) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
-                [array[i], array[j]] = [array[j], array[i]];
+                [arr[i], arr[j]] = [arr[j], arr[i]];
             }
-            return array;
+            return arr;
         }
 
         /**
-         * 오류 메시지를 표시하거나 숨깁니다.
-         * @param {string | null} message - 표시할 오류 메시지 (null이면 숨김)
+         * 에러 메시지 표시
          */
         function displayError(message) {
-            if (message) {
-                errorText.textContent = message;
-                errorMessageDiv.classList.remove('hidden');
-                console.error('ERROR:', message);
-            } else {
-                errorMessageDiv.classList.add('hidden');
-                errorText.textContent = '';
-            }
-        }
-        
-        // --- 챕터 드롭다운 제어 함수 ---
-
-        /**
-         * 챕터 목록을 드롭다운에 렌더링합니다.
-         */
-        function renderChapterDropdown() {
-            // 중복 제거된 챕터 목록을 정렬
-            const sortedChapters = [...new Set(allChapters)].sort((a, b) => a - b);
-            
-            if (sortedChapters.length === 0) {
-                chapterSelectDropdown.innerHTML = '<div class="px-4 py-2 text-sm text-gray-500">챕터 데이터가 없습니다.</div>';
+            if (!message) {
+                errorMessage.textContent = '';
                 return;
             }
-            
-            // 드롭다운 내용 생성
-            let html = `
-                <label class="block px-4 py-2 font-semibold text-gray-800 border-b border-gray-100 cursor-default">챕터 전체 선택/해제</label>
-                <label class="px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center">
-                    <input type="checkbox" id="selectAllChapters" checked class="form-checkbox h-4 w-4 text-indigo-600 transition duration-150 ease-in-out rounded-sm">
-                    <span class="ml-2">전체 선택/해제</span>
-                </label>
-                <div class="border-t border-gray-100 my-1"></div>
-            `;
-            
-            sortedChapters.forEach(chapter => {
-                html += `
-                    <label class="px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center">
-                        <input type="checkbox" name="chapter" value="${chapter}" checked class="chapter-checkbox form-checkbox h-4 w-4 text-indigo-600 transition duration-150 ease-in-out rounded-sm">
-                        <span class="ml-2">챕터 ${chapter}</span>
-                    </label>
-                `;
-            });
-            
-            chapterSelectDropdown.innerHTML = html;
-            
-            // 이벤트 리스너 연결
-            document.getElementById('selectAllChapters').addEventListener('change', handleSelectAll);
-            document.querySelectorAll('.chapter-checkbox').forEach(checkbox => {
-                checkbox.addEventListener('change', () => {
-                    updateSelectedChaptersText();
-                    generateTestPaper(); 
-                });
-            });
-            updateSelectedChaptersText();
+            errorMessage.textContent = message;
+            console.error(message);
         }
 
         /**
-         * 챕터 전체 선택/해제 핸들러
-         * @param {Event} e - 이벤트 객체
+         * 상태 메시지 표시
          */
-        function handleSelectAll(e) {
-            const isChecked = e.target.checked;
-            document.querySelectorAll('.chapter-checkbox').forEach(checkbox => {
-                checkbox.checked = isChecked;
-            });
-            updateSelectedChaptersText();
-            generateTestPaper(); 
+        function displayStatus(message) {
+            statusMessage.textContent = message || '';
         }
 
-        /**
-         * 선택된 챕터 개수를 버튼 텍스트로 업데이트
-         */
-        function updateSelectedChaptersText() {
-            const checkedBoxes = document.querySelectorAll('.chapter-checkbox:checked');
-            const totalChapters = document.querySelectorAll('.chapter-checkbox').length;
-            const selectAllCheckbox = document.getElementById('selectAllChapters');
-            
-            if (checkedBoxes.length === 0) {
-                selectedChaptersText.textContent = '챕터를 선택하세요';
-                if (selectAllCheckbox) selectAllCheckbox.checked = false;
-            } else if (checkedBoxes.length === totalChapters && totalChapters > 0) {
-                selectedChaptersText.textContent = '모든 챕터';
-                if (selectAllCheckbox) selectAllCheckbox.checked = true;
-            } else if (checkedBoxes.length > 0) {
-                selectedChaptersText.textContent = `${checkedBoxes.length}개의 챕터 선택됨`;
-                if (selectAllCheckbox) selectAllCheckbox.checked = false;
-            } else {
-                 selectedChaptersText.textContent = '데이터 로드 중...';
-            }
-        }
-        
-        /**
-         * 드롭다운 토글 및 외부 클릭 처리
-         */
-        function setupDropdownToggle() {
-            let isDropdownOpen = false;
+        // --- CSV 데이터 로드 ---
 
-            if (!chapterSelectButton.hasAttribute('data-listener-added')) {
-                chapterSelectButton.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    
-                    if (allChapters.length === 0) {
-                        displayError('챕터 데이터를 찾을 수 없어 드롭다운을 열 수 없습니다. 파일 로드 상태를 확인해주세요.');
-                        return; 
-                    }
-
-                    isDropdownOpen = !isDropdownOpen;
-                    chapterSelectDropdown.style.display = isDropdownOpen ? 'block' : 'none';
-                });
-                
-                document.addEventListener('click', (e) => {
-                    if (!chapterSelectContainer.contains(e.target) && isDropdownOpen) {
-                        isDropdownOpen = false;
-                        chapterSelectDropdown.style.display = 'none';
-                    }
-                });
-                chapterSelectButton.setAttribute('data-listener-added', 'true');
-            }
-            
-            if (allChapters.length > 0) {
-                chapterSelectButton.disabled = false;
-                updateSelectedChaptersText(); 
-            } else {
-                chapterSelectButton.disabled = true;
-                selectedChaptersText.textContent = '챕터 로드 실패';
-            }
-        }
-
-
-        // --- 데이터 로드 및 초기화 ---
-
-        /**
-         * CSV 파일을 로드하고 파싱하여 전역 변수를 초기화합니다.
-         */
         async function loadData() {
             loadingIndicator.classList.remove('hidden');
             displayError(null);
             
             try {
-                // 새로운 파일명 word_data.csv를 사용합니다.
-                const fileUrl = window.getFileUrl ? window.getFileUrl(WORD_FILE_NAME) : null;
-
-                if (!fileUrl) {
-                    throw new Error(`파일 URL을 가져올 수 없습니다. 현재 인식된 파일명: '${WORD_FILE_NAME}'으로 요청했으나 경로를 찾을 수 없습니다.`);
+                // GitHub Pages 또는 일반 웹 환경에서 word_data.csv를 불러옵니다.
+                // index.html과 같은 경로에 word_data.csv가 있다고 가정합니다.
+                let fileUrl;
+                
+                // ChatGPT 미리보기 환경 호환
+                if (window.getFileUrl) {
+                    fileUrl = window.getFileUrl(WORD_FILE_NAME);
+                } else {
+                    // 일반 브라우저 / GitHub Pages 환경
+                    fileUrl = WORD_FILE_NAME; // 예: 'word_data.csv'
                 }
 
                 const response = await fetch(fileUrl);
@@ -435,21 +390,21 @@
                     throw new Error("CSV 파일에서 유효한 단어 데이터를 찾을 수 없습니다. 파일 내용 형식을 확인해주세요.");
                 }
                 
-                // 챕터 목록 추출 및 초기화 (NaN 값 필터링)
+                // 챕터 목록 추출 (NaN 값 제외)
                 allChapters = vocabularyData
                     .map(item => item.Chapter)
-                    .filter(c => !isNaN(c)); 
-
-                // 챕터 드롭다운 렌더링 및 클릭 이벤트 설정
+                    .filter(c => !isNaN(c));
+                
+                // 드롭다운 렌더링 및 토글 셋업
                 renderChapterDropdown();
                 setupDropdownToggle(); 
                 
-                // 로드 완료 후 버튼 활성화
+                // 버튼 활성화
                 generateButton.disabled = false;
                 
                 console.log(`총 ${vocabularyData.length}개의 단어 로드 완료. (파일: ${WORD_FILE_NAME})`);
                 
-                // 초기 테스트지 생성 (데이터 로드 후 자동 실행)
+                // 초기 테스트지 자동 생성
                 generateTestPaper();
 
             } catch (error) {
@@ -463,6 +418,112 @@
             }
         }
 
+        // --- 챕터 선택 드롭다운 렌더링 및 동작 ---
+
+        /**
+         * 챕터 목록을 기반으로 다중 선택 체크박스를 렌더링합니다.
+         */
+        function renderChapterDropdown() {
+            // 중복 제거 및 정렬
+            const uniqueChapters = Array.from(new Set(allChapters.filter(c => !isNaN(c))));
+            const sortedChapters = uniqueChapters.sort((a, b) => a - b);
+
+            chapterCheckboxList.innerHTML = '';
+
+            if (sortedChapters.length === 0) {
+                const noDataDiv = document.createElement('div');
+                noDataDiv.className = 'px-3 py-2 text-xs text-gray-500';
+                noDataDiv.textContent = '선택 가능한 챕터가 없습니다.';
+                chapterCheckboxList.appendChild(noDataDiv);
+                return;
+            }
+
+            sortedChapters.forEach(chapter => {
+                const id = `chapter_${chapter}`;
+                const wrapper = document.createElement('div');
+                wrapper.className = 'flex items-center px-3 py-1 hover:bg-gray-50';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = id;
+                checkbox.value = chapter;
+                checkbox.className = 'chapter-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded';
+                checkbox.checked = true;
+
+                const label = document.createElement('label');
+                label.htmlFor = id;
+                label.className = 'ml-2 text-sm text-gray-700';
+                label.textContent = `Chapter ${chapter}`;
+
+                wrapper.appendChild(checkbox);
+                wrapper.appendChild(label);
+                chapterCheckboxList.appendChild(wrapper);
+            });
+
+            // 초기 선택 상태 텍스트 업데이트
+            updateSelectedChaptersText();
+
+            // 체크박스 변경 시 텍스트 업데이트
+            chapterCheckboxList.addEventListener('change', () => {
+                updateSelectedChaptersText();
+            });
+
+            // "전체 선택" 버튼 동작
+            selectAllChaptersButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                const checkboxes = chapterCheckboxList.querySelectorAll('.chapter-checkbox');
+                const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+                checkboxes.forEach(cb => cb.checked = !allChecked);
+                updateSelectedChaptersText();
+            });
+
+            // 챕터 버튼 활성화
+            chapterSelectButton.disabled = false;
+        }
+
+        /**
+         * 선택된 챕터 목록 텍스트 업데이트
+         */
+        function updateSelectedChaptersText() {
+            const selected = Array.from(document.querySelectorAll('.chapter-checkbox:checked')).map(cb => parseInt(cb.value, 10));
+            if (selected.length === 0) {
+                selectedChaptersText.textContent = '선택된 챕터 없음';
+            } else if (selected.length === allChapters.length) {
+                selectedChaptersText.textContent = '전체 챕터 선택';
+            } else {
+                selectedChaptersText.textContent = `선택된 챕터: ${selected.join(', ')}`;
+            }
+
+            // "전체 선택" 버튼 글자도 변경
+            const checkboxes = chapterCheckboxList.querySelectorAll('.chapter-checkbox');
+            const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+            if (allChecked) {
+                selectAllChaptersButton.textContent = '전체 해제';
+            } else {
+                selectAllChaptersButton.textContent = '전체 선택';
+            }
+        }
+
+        /**
+         * 드롭다운 토글 및 외부 클릭 처리
+         */
+        function setupDropdownToggle() {
+            chapterSelectButton.addEventListener('click', () => {
+                const isHidden = chapterSelectDropdown.classList.contains('hidden');
+                if (isHidden) {
+                    chapterSelectDropdown.classList.remove('hidden');
+                } else {
+                    chapterSelectDropdown.classList.add('hidden');
+                }
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!chapterSelectContainer.contains(e.target)) {
+                    chapterSelectDropdown.classList.add('hidden');
+                }
+            });
+        }
+
         // --- 테스트지 생성 로직 ---
 
         /**
@@ -474,176 +535,199 @@
             const wordType = wordTypeFilter.value;
             const wordCount = parseInt(wordCountInput.value, 10);
 
-            if (vocabularyData.length === 0) return [];
-            
-            if (selectedChapters.length === 0) {
-                return [];
+            if (!selectedChapters.length) {
+                throw new Error("최소 1개 이상의 챕터를 선택해야 합니다.");
             }
 
-            // 1. 챕터 및 단어 유형 필터링
-            let filteredWords = vocabularyData.filter(word => {
-                const chapterMatch = selectedChapters.includes(word.Chapter);
-                let typeMatch = true;
-                
-                if (wordType !== 'all') {
-                    typeMatch = word.Type === wordType;
-                }
-
-                return chapterMatch && typeMatch;
-            });
-            
-            if (filteredWords.length === 0) {
-                return [];
+            if (!wordCount || wordCount <= 0) {
+                throw new Error("문항 수는 1 이상이어야 합니다.");
             }
 
-            // 2. 무작위로 섞기
-            let shuffledWords = shuffleArray(filteredWords);
+            let filtered = vocabularyData.filter(item => selectedChapters.includes(item.Chapter));
 
-            // 3. 테스트 개수만큼 자르기 (wordCount 초과 방지)
-            const finalWords = shuffledWords.slice(0, Math.min(wordCount, shuffledWords.length));
-            
-            return finalWords;
+            if (wordType !== 'all') {
+                filtered = filtered.filter(item => item.Type === wordType);
+            }
+
+            if (!filtered.length) {
+                throw new Error("선택된 조건에 해당하는 단어가 없습니다. 챕터 또는 단어 유형 설정을 확인해주세요.");
+            }
+
+            const shuffled = shuffleArray(filtered);
+
+            return shuffled.slice(0, Math.min(wordCount, shuffled.length));
         }
 
         /**
-         * 테스트지와 정답지를 생성하여 DOM에 렌더링합니다.
+         * 테스트지 HTML 렌더링
          */
-        function generateTestPaper() {
-            displayError(null);
-            generateButton.disabled = true;
-            printButton.disabled = true;
+        function renderTestPaper(words) {
+            const testType = testTypeSelect.value;
+            const showNumbering = showNumberingCheckbox.checked;
 
-            const selectedWords = getFilteredAndShuffledWords();
-            const quizType = quizTypeSelect.value;
-            
-            const allChapterCheckboxes = document.querySelectorAll('.chapter-checkbox');
-            const selectedChapterValues = Array.from(document.querySelectorAll('.chapter-checkbox:checked')).map(cb => cb.value);
-            const selectedChaptersTextContent = (selectedChapterValues.length === allChapterCheckboxes.length && allChapterCheckboxes.length > 0) ? '전체 챕터' : selectedChapterValues.join(', ');
-
-            if (selectedWords.length === 0) {
-                if (vocabularyData.length === 0) {
-                } else if (selectedChapterValues.length === 0) {
-                    displayError('테스트지를 생성하려면 하나 이상의 챕터를 선택해야 합니다.');
-                } else {
-                    displayError('선택된 필터 기준으로 출제할 수 있는 단어가 부족하거나 없습니다. 필터를 조정해 주세요.');
-                }
-                testPaperDiv.innerHTML = '<p class="text-center text-gray-500 py-10">테스트지를 생성할 수 없습니다. 오류 메시지를 확인하거나 옵션을 조정하세요.</p>';
-                answerPaperDiv.classList.add('hidden');
-                generateButton.disabled = false;
+            if (!words || !words.length) {
+                testPaper.innerHTML = '<div class="text-center text-gray-400 text-sm">출력할 문제가 없습니다.</div>';
+                answerContent.innerHTML = '';
                 return;
             }
 
-            // --- 용지 크기 설정 ---
-            const paperSize = paperSizeSelect.value;
-            if (paperSize === 'A4') {
-                paperContainer.style.width = '210mm';
-                paperContainer.style.minHeight = '297mm';
-            } else if (paperSize === 'Letter') {
-                paperContainer.style.width = '216mm';
-                paperContainer.style.minHeight = '279mm';
-            }
-            
-            // --- 테스트지 생성 ---
-            const quizTitle = quizType === 'wordToMeaning' ? '단어 보고 뜻 쓰기 테스트' : '뜻 보고 단어 쓰기 테스트';
-            let testHtml = `
-                <div class="flex justify-between items-center mb-6 border-b border-gray-300 pb-2">
-                    <h1 class="text-xl font-bold text-gray-800">${quizTitle}</h1>
-                    <div class="flex flex-col text-sm text-gray-600 text-right">
-                        <span>날짜: _________</span>
-                        <span>이름: _________</span>
-                        <span>점수: _________</span>
-                    </div>
-                </div>
-                <div class="text-sm text-gray-600 mb-4">
-                    <p><strong>대상 챕터:</strong> ${selectedChaptersTextContent}</p>
-                    <p><strong>출제 개수:</strong> ${selectedWords.length}개 (요청 개수: ${wordCountInput.value}개)</p>
-                </div>
-                <table class="min-w-full divide-y divide-gray-200 border border-gray-300">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/12 border-r border-gray-300">No.</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-5/12 border-r border-gray-300">${quizType === 'wordToMeaning' ? '단어(Word)' : '뜻(Meaning)'}</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-6/12">${quizType === 'wordToMeaning' ? '뜻 (Meaning)' : '단어 (Word)'}</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-            `;
+            // 문제/정답 생성
+            const testCells = [];
+            const answers = [];
 
-            selectedWords.forEach((word, index) => {
-                const question = quizType === 'wordToMeaning' ? word.Word : word.Meaning;
-                
-                testHtml += `
-                    <tr>
-                        <td class="px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-300">${index + 1}.</td>
-                        <td class="px-6 py-3 text-sm text-gray-800 border-r border-gray-300">${question}</td>
-                        <td class="px-6 py-3 text-sm text-gray-500">${'__________________________________'}</td>
-                    </tr>
+            words.forEach((item, index) => {
+                const number = index + 1;
+                const word = item.Word;
+                const meaning = item.Meaning;
+
+                let questionText = '';
+                let answerText = '';
+
+                if (testType === 'word-to-meaning') {
+                    questionText = word;
+                    answerText = `${number}. ${word} → ${meaning}`;
+                } else if (testType === 'meaning-to-word') {
+                    questionText = meaning;
+                    answerText = `${number}. ${meaning} → ${word}`;
+                } else if (testType === 'mixed') {
+                    if (index % 2 === 0) {
+                        questionText = word;
+                        answerText = `${number}. ${word} → ${meaning}`;
+                    } else {
+                        questionText = meaning;
+                        answerText = `${number}. ${meaning} → ${word}`;
+                    }
+                }
+
+                const cellHtml = `
+                    <div class="test-cell question-block">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                ${showNumbering ? `<span class="text-xs text-gray-500 mr-1">${number}.</span>` : ''}
+                                <span class="font-medium text-gray-800">${questionText}</span>
+                            </div>
+                            <div class="w-24 border-b border-gray-300 ml-2"></div>
+                        </div>
+                        <div class="mt-2 text-xs text-gray-400">
+                            <span class="mr-2 text-gray-400">[Chap ${item.Chapter}]</span>
+                            <span class="text-gray-400">${item.Type}</span>
+                        </div>
+                    </div>
                 `;
+
+                testCells.push(cellHtml);
+                answers.push(answerText);
             });
 
-            testHtml += `</tbody></table>`;
-            testPaperDiv.innerHTML = testHtml;
-
-
-            // --- 정답지 생성 ---
-            let answerHtml = `
-                <div class="flex justify-between items-center mb-6 border-b border-gray-300 pb-2">
-                    <h1 class="text-xl font-bold text-red-600">정답지 (Answer Key)</h1>
-                    <div class="text-sm text-gray-600">
-                        <span>대상 챕터: ${selectedChaptersTextContent}</span>
-                    </div>
+            const gridHtml = `
+                <div class="test-grid">
+                    ${testCells.join('')}
                 </div>
-                <table class="min-w-full divide-y divide-gray-200 border border-gray-300">
-                    <thead class="bg-red-50">
-                        <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-red-700 uppercase tracking-wider w-1/12 border-r border-gray-300">No.</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-red-700 uppercase tracking-wider w-5/12 border-r border-gray-300">단어(Word)</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-red-700 uppercase tracking-wider w-6/12">뜻(Meaning)</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
             `;
 
-            selectedWords.forEach((word, index) => {
-                answerHtml += `
-                    <tr class="hover:bg-red-50">
-                        <td class="px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-300">${index + 1}.</td>
-                        <td class="px-6 py-3 text-sm text-gray-800 border-r border-gray-300">${word.Word}</td>
-                        <td class="px-6 py-3 text-sm text-red-600">${word.Meaning}</td>
-                    </tr>
-                `;
-            });
+            const countedByChapter = words.reduce((acc, cur) => {
+                acc[cur.Chapter] = (acc[cur.Chapter] || 0) + 1;
+                return acc;
+            }, {});
 
-            answerHtml += `</tbody></table>`;
-            answerPaperDiv.innerHTML = answerHtml;
-            answerPaperDiv.classList.remove('hidden');
+            const chapterSummary = Object.entries(countedByChapter)
+                .sort((a, b) => Number(a[0]) - Number(b[0]))
+                .map(([ch, cnt]) => `Ch${ch}: ${cnt}문항`)
+                .join(', ');
 
-            generateButton.disabled = false;
-            printButton.disabled = false;
+            const metaHtml = `
+                <div class="mb-4 flex justify-between items-center">
+                    <div class="text-sm font-semibold text-gray-800">랜덤 단어 테스트</div>
+                    <div class="text-xs text-gray-500">${new Date().toLocaleDateString()}</div>
+                </div>
+                <div class="mb-4 flex items-center justify-between text-xs text-gray-500">
+                    <div>총 ${words.length}문항 | 챕터 분포: ${chapterSummary}</div>
+                    <div>문제 유형: ${
+                        testType === 'word-to-meaning' ? '영어 → 뜻 쓰기' :
+                        testType === 'meaning-to-word' ? '뜻 → 영어 쓰기' : '섞어서 출제'
+                    }</div>
+                </div>
+            `;
+
+            testPaper.innerHTML = metaHtml + gridHtml;
+
+            answerContent.innerHTML = answers
+                .map(ans => `<div>${ans}</div>`)
+                .join('');
         }
 
         /**
-         * 인쇄 기능을 실행합니다.
+         * 테스트지 생성 메인 함수
          */
-        function printPaper() {
-            window.print();
+        function generateTestPaper() {
+            try {
+                displayError(null);
+                const words = getFilteredAndShuffledWords();
+                renderTestPaper(words);
+
+                displayStatus(`총 ${words.length}문항이 랜덤으로 생성되었습니다.`);
+            } catch (error) {
+                displayError(error.message);
+                displayStatus('');
+            }
         }
 
-        // --- 초기화 및 이벤트 리스너 설정 ---
-        window.onload = function() {
-            // 초기에는 생성 및 챕터 버튼 비활성화
-            generateButton.disabled = true;
-            chapterSelectButton.disabled = true;
+        // --- 이벤트 리스너 등록 ---
 
+        // 스크롤 버튼 표시/숨기기
+        window.addEventListener('scroll', () => {
+            const scrollY = window.scrollY || document.documentElement.scrollTop;
+            const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+
+            if (scrollY > 200) {
+                scrollTopButton.classList.remove('hidden');
+            } else {
+                scrollTopButton.classList.add('hidden');
+            }
+
+            if (scrollY < docHeight - 200) {
+                scrollBottomButton.classList.remove('hidden');
+            } else {
+                scrollBottomButton.classList.add('hidden');
+            }
+        });
+
+        scrollTopButton.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        scrollBottomButton.addEventListener('click', () => {
+            window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
+        });
+
+        // 테스트지 생성 버튼
+        generateButton.addEventListener('click', () => {
+            generateTestPaper();
+        });
+
+        // 인쇄 버튼
+        printButton.addEventListener('click', () => {
+            window.print();
+        });
+
+        // 설정 변경 시 자동으로 상태 안내
+        wordCountInput.addEventListener('change', () => {
+            displayStatus('옵션이 변경되었습니다. "테스트지 생성" 버튼을 눌러 새로 생성하세요.');
+        });
+        testTypeSelect.addEventListener('change', () => {
+            displayStatus('옵션이 변경되었습니다. "테스트지 생성" 버튼을 눌러 새로 생성하세요.');
+        });
+        wordTypeFilter.addEventListener('change', () => {
+            displayStatus('옵션이 변경되었습니다. "테스트지 생성" 버튼을 눌러 새로 생성하세요.');
+        });
+        showNumberingCheckbox.addEventListener('change', () => {
+            displayStatus('옵션이 변경되었습니다. "테스트지 생성" 버튼을 눌러 새로 생성하세요.');
+        });
+
+        // 초기 데이터 로드
+        window.addEventListener('DOMContentLoaded', () => {
             loadData();
-            
-            generateButton.addEventListener('click', generateTestPaper);
-            printButton.addEventListener('click', printPaper);
-            paperSizeSelect.addEventListener('change', generateTestPaper);
-            wordTypeFilter.addEventListener('change', generateTestPaper);
-            wordCountInput.addEventListener('change', generateTestPaper);
-            quizTypeSelect.addEventListener('change', generateTestPaper);
-        };
+        });
 
     </script>
 </body>
