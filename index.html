@@ -51,8 +51,12 @@
             .test-grid {
                 display: grid;
                 grid-template-columns: repeat(2, 1fr);
-                grid-auto-flow: column; /* 상하좌우 배치 */
                 column-gap: 24px;
+            }
+
+            .test-col {
+                display: flex;
+                flex-direction: column;
                 row-gap: 6px;
             }
 
@@ -68,6 +72,7 @@
 
             .test-word {
                 min-width: 6rem;
+                white-space: nowrap;
             }
 
             .answer-line {
@@ -82,8 +87,12 @@
         .test-grid {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
-            grid-auto-flow: column; /* 상하좌우 배치 */
             column-gap: 32px;
+        }
+
+        .test-col {
+            display: flex;
+            flex-direction: column;
             row-gap: 8px;
         }
 
@@ -102,6 +111,7 @@
         .test-word {
             min-width: 6rem;
             font-weight: 500;
+            white-space: nowrap; /* in comparison with 한 줄 유지 */
         }
 
         .answer-line {
@@ -244,12 +254,12 @@
             <div id="errorMessage" class="mt-1 text-xs text-red-500"></div>
         </div>
 
-        <!-- 테스트지 영역 (출력 대상) -->
-        <section id="testPaper" class="print-area bg-white p-6 rounded-xl shadow-md">
+        <!-- 테스트지 영역: 카드 느낌 제거 -->
+        <section id="testPaper" class="print-area bg-white p-6">
             <div class="text-center text-gray-400 text-sm">CSV 데이터를 로딩 중입니다...</div>
         </section>
 
-        <!-- 정답지 영역 (화면용, 필요 시 별도 인쇄) -->
+        <!-- 정답지 영역 -->
         <section id="answerSheet" class="no-print mt-6 bg-white p-4 rounded-xl shadow-md">
             <div class="flex items-center justify-between mb-2">
                 <h2 class="text-lg font-semibold text-gray-800">정답지 (미리보기용)</h2>
@@ -616,9 +626,19 @@
                 answers.push(answerText);
             });
 
+            // 상하좌우 순서를 위해: 왼쪽에 1~중간, 오른쪽에 나머지
+            const mid = Math.ceil(testCells.length / 2);
+            const leftCells = testCells.slice(0, mid).join('');
+            const rightCells = testCells.slice(mid).join('');
+
             const gridHtml = `
                 <div class="test-grid">
-                    ${testCells.join('')}
+                    <div class="test-col">
+                        ${leftCells}
+                    </div>
+                    <div class="test-col">
+                        ${rightCells}
+                    </div>
                 </div>
             `;
 
@@ -673,21 +693,18 @@
 
         /* 인쇄 버튼 - 테스트지 / 정답지 분리 */
         printTestButton.addEventListener('click', () => {
-            // 테스트지만 인쇄: 정답지는 항상 no-print 유지
             answerSheet.classList.add('no-print');
             testPaper.classList.remove('no-print');
             window.print();
         });
 
         printAnswerButton.addEventListener('click', () => {
-            // 정답지만 인쇄: 테스트지는 no-print, 정답지는 인쇄
             const answerHadNoPrint = answerSheet.classList.contains('no-print');
 
             testPaper.classList.add('no-print');
             answerSheet.classList.remove('no-print');
             window.print();
 
-            // 인쇄 후 상태 복구
             setTimeout(() => {
                 if (answerHadNoPrint) answerSheet.classList.add('no-print');
                 testPaper.classList.remove('no-print');
