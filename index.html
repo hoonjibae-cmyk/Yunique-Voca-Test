@@ -41,7 +41,8 @@
             }
 
             .print-area {
-                page-break-after: always;
+                page-break-after: auto;
+                break-after: auto;
             }
 
             .question-block {
@@ -172,7 +173,7 @@
 
         .exam-name-line {
             display: flex;
-            align-items: center;
+            align-items: flex-end;
             gap: 0.5rem;
             font-size: 0.92rem;
             color: #111827;
@@ -181,8 +182,19 @@
         .line-fill {
             display: inline-block;
             border-bottom: 1px solid #111827;
-            height: 0;
+            height: 1.05rem;
+            line-height: 1.05rem;
             flex: 1;
+            vertical-align: bottom;
+        }
+
+        .inline-write-line {
+            display: inline-block;
+            min-width: 8rem;
+            height: 1.05rem;
+            line-height: 1.05rem;
+            border-bottom: 1px solid #6b7280;
+            vertical-align: bottom;
         }
 
         .exam-meta-grid {
@@ -984,13 +996,13 @@
                 <div class="exam-header-card">
                     <div class="exam-header-top">
                         <div>
-                            <div class="exam-badge">MOKDONG YUSSAM ENGLISH</div>
+                            <div class="exam-badge">목동유쌤영어학원</div>
                             <div class="exam-title">유니크보카 단어 테스트</div>
                             <div class="exam-subtitle">
                                 반 이름:
                                 ${className
                                     ? `<span class="font-semibold text-gray-900">${className}</span>`
-                                    : `<span class="inline-block w-32 border-b border-gray-500 align-middle h-0"></span>`}
+                                    : `<span class="inline-write-line w-32"></span>`}
                                 ${cutLineDisplay
                                     ? `&nbsp;&nbsp;·&nbsp;&nbsp;<span class="font-semibold text-gray-900">${cutLineDisplay}</span>`
                                     : ''}
