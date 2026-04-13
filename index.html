@@ -116,9 +116,210 @@
 
         .answer-line {
             flex-grow: 1;
-            border-bottom: 1px solid #d1d5db;
+            border-bottom: 1px solid #9ca3af;
             margin-left: 0.5rem;
             height: 0;
+        }
+
+        .exam-paper-shell {
+            border: 1px solid #d1d5db;
+            border-radius: 0.75rem;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+        }
+
+        .exam-header-card {
+            border: 2px solid #111827;
+            padding: 1rem 1rem 0.875rem 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .exam-header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .exam-badge {
+            display: inline-block;
+            border: 1px solid #111827;
+            padding: 0.2rem 0.5rem;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            margin-bottom: 0.55rem;
+        }
+
+        .exam-title {
+            font-size: 1.55rem;
+            font-weight: 800;
+            letter-spacing: 0.01em;
+            color: #111827;
+            line-height: 1.2;
+        }
+
+        .exam-subtitle {
+            margin-top: 0.35rem;
+            font-size: 0.78rem;
+            color: #374151;
+        }
+
+        .exam-name-box {
+            min-width: 10rem;
+            border: 1px solid #111827;
+            padding: 0.65rem 0.8rem;
+        }
+
+        .exam-name-line {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.92rem;
+            color: #111827;
+        }
+
+        .line-fill {
+            display: inline-block;
+            border-bottom: 1px solid #111827;
+            height: 0;
+            flex: 1;
+        }
+
+        .exam-meta-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0;
+            margin-top: 0.85rem;
+            border-top: 1px solid #111827;
+            border-left: 1px solid #111827;
+        }
+
+        .exam-meta-item {
+            display: flex;
+            align-items: center;
+            min-height: 2.35rem;
+            border-right: 1px solid #111827;
+            border-bottom: 1px solid #111827;
+            font-size: 0.84rem;
+            color: #111827;
+        }
+
+        .exam-meta-label {
+            width: 5.4rem;
+            padding: 0.65rem 0.75rem;
+            font-weight: 700;
+            background: #f9fafb;
+            border-right: 1px solid #111827;
+            flex-shrink: 0;
+        }
+
+        .exam-meta-value {
+            flex: 1;
+            padding: 0.65rem 0.75rem;
+            min-width: 0;
+        }
+
+        .exam-info-strip {
+            margin-top: 0.8rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+        }
+
+        .exam-chip {
+            border: 1px solid #9ca3af;
+            border-radius: 9999px;
+            padding: 0.2rem 0.55rem;
+            font-size: 0.72rem;
+            color: #374151;
+        }
+
+        .question-zone {
+            border-top: 2px solid #111827;
+            padding-top: 0.9rem;
+        }
+
+        .test-col {
+            position: relative;
+        }
+
+        .test-col:first-child {
+            padding-right: 0.3rem;
+        }
+
+        .test-col:last-child {
+            padding-left: 0.3rem;
+        }
+
+        .test-cell {
+            display: flex;
+            align-items: baseline;
+            font-size: 0.95rem;
+            color: #111827;
+            min-height: 1.8rem;
+        }
+
+        .test-word {
+            min-width: 6rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        @media print {
+            .exam-paper-shell {
+                border: none;
+                border-radius: 0;
+                box-shadow: none;
+            }
+
+            .exam-header-card {
+                border-width: 1.6px;
+                margin-bottom: 0.75rem;
+                padding: 0.85rem 0.85rem 0.75rem 0.85rem;
+            }
+
+            .exam-title {
+                font-size: 1.35rem;
+            }
+
+            .exam-subtitle {
+                font-size: 0.72rem;
+            }
+
+            .exam-name-box {
+                min-width: 8.2rem;
+                padding: 0.5rem 0.65rem;
+            }
+
+            .exam-meta-item {
+                min-height: 2rem;
+                font-size: 0.76rem;
+            }
+
+            .exam-meta-label,
+            .exam-meta-value {
+                padding-top: 0.45rem;
+                padding-bottom: 0.45rem;
+            }
+
+            .exam-info-strip {
+                margin-top: 0.55rem;
+                gap: 0.3rem;
+            }
+
+            .exam-chip {
+                font-size: 0.64rem;
+                padding: 0.14rem 0.45rem;
+            }
+
+            .question-zone {
+                padding-top: 0.7rem;
+            }
+
+            .test-cell {
+                min-height: 1.55rem;
+                font-size: 0.92rem;
+            }
         }
 
         #scrollTopButton,
@@ -780,29 +981,54 @@
             }
 
             const headerHtml = `
-                <div class="mb-2 flex justify-between items-baseline">
-                    <div>
-                        <div class="text-xs font-semibold text-gray-700">목동유쌤영어</div>
-                        <div class="text-xl font-bold text-gray-900">유니크보카 단어 테스트</div>
-                        <div class="mt-1 text-xs text-gray-700">
-                            반 이름:
-                            ${className
-                                ? `<span class="font-semibold">${className}</span>`
-                                : `<span class="inline-block w-32 border-b border-gray-400 align-middle h-0"></span>`}
-                            ${cutLineDisplay
-                                ? `&nbsp;|&nbsp; <span class="font-semibold">${cutLineDisplay}</span>`
-                                : ''}
+                <div class="exam-header-card">
+                    <div class="exam-header-top">
+                        <div>
+                            <div class="exam-badge">MOKDONG YUSSAM ENGLISH</div>
+                            <div class="exam-title">유니크보카 단어 테스트</div>
+                            <div class="exam-subtitle">
+                                반 이름:
+                                ${className
+                                    ? `<span class="font-semibold text-gray-900">${className}</span>`
+                                    : `<span class="inline-block w-32 border-b border-gray-500 align-middle h-0"></span>`}
+                                ${cutLineDisplay
+                                    ? `&nbsp;&nbsp;·&nbsp;&nbsp;<span class="font-semibold text-gray-900">${cutLineDisplay}</span>`
+                                    : ''}
+                            </div>
+                        </div>
+                        <div class="exam-name-box shrink-0">
+                            <div class="exam-name-line">
+                                <span class="font-semibold">이름</span>
+                                <span class="line-fill"></span>
+                            </div>
                         </div>
                     </div>
-                    <div class="flex flex-col items-end text-sm text-gray-800 space-y-1">
-                        <div class="flex items-center">
-                            <span class="mr-2">이름</span>
-                            <span class="inline-block w-32 border-b border-gray-800 h-0"></span>
+
+                    <div class="exam-info-strip">
+                        <span class="exam-chip">Chapter ${chapterList || '-'}</span>
+                        <span class="exam-chip">유형 ${typeLabel}</span>
+                        <span class="exam-chip">방향 ${directionLabel}</span>
+                        <span class="exam-chip">문항 수 ${words.length}</span>
+                    </div>
+
+                    <div class="exam-meta-grid">
+                        <div class="exam-meta-item">
+                            <div class="exam-meta-label">채점자</div>
+                            <div class="exam-meta-value"><span class="line-fill"></span></div>
+                        </div>
+                        <div class="exam-meta-item">
+                            <div class="exam-meta-label">채점 결과</div>
+                            <div class="exam-meta-value">○ Pass &nbsp;&nbsp;&nbsp; ○ Fail</div>
+                        </div>
+                        <div class="exam-meta-item">
+                            <div class="exam-meta-label">재시험일</div>
+                            <div class="exam-meta-value"><span class="line-fill"></span></div>
+                        </div>
+                        <div class="exam-meta-item">
+                            <div class="exam-meta-label">파일명</div>
+                            <div class="exam-meta-value"><span class="line-fill"></span></div>
                         </div>
                     </div>
-                </div>
-                <div class="border-t-2 border-gray-900 pt-2 mt-1 mb-4 text-xs text-gray-700">
-                    Chapter: ${chapterList || '-'} | 유형: ${typeLabel} | 방향: ${directionLabel} | 문항 수: ${words.length}
                 </div>
             `;
 
@@ -851,17 +1077,17 @@
             const rightCells = testCells.slice(mid).join('');
 
             const gridHtml = `
-                <div class="test-grid">
+                <div class="question-zone"><div class="test-grid">
                     <div class="test-col">
                         ${leftCells}
                     </div>
                     <div class="test-col">
                         ${rightCells}
                     </div>
-                </div>
+                </div></div>
             `;
 
-            testPaper.innerHTML = headerHtml + gridHtml;
+            testPaper.innerHTML = `<div class="exam-paper-shell">${headerHtml}${gridHtml}</div>`;
 
             answerContent.innerHTML = answers
                 .map(ans => `<div>${ans}</div>`)
