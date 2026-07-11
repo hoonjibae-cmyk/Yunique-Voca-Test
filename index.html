@@ -428,6 +428,8 @@
                 <span>CSV 기반 자동 생성</span>
                 <span>·</span>
                 <span>GitHub Pages 호환</span>
+                <span>·</span>
+                <span id="appVersion" class="font-semibold text-gray-500"></span>
             </div>
         </div>
     </header>
@@ -613,6 +615,9 @@
     </main>
 
     <script type="module">
+        /* ===== 앱 버전 (업데이트 시 이 값만 수정) ===== */
+        const APP_VERSION = 'v1.1';
+
         let vocabularyData = [];
         let allChapters = [];
         let allWordTypes = [];
@@ -1291,6 +1296,8 @@
         }
 
         window.addEventListener('DOMContentLoaded', () => {
+            const versionEl = document.getElementById('appVersion');
+            if (versionEl) versionEl.textContent = APP_VERSION;
             populateCutLineOptions();
             loadData();
         });
