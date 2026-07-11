@@ -50,8 +50,7 @@
             }
 
             .test-grid {
-                display: grid;
-                grid-template-columns: repeat(2, 1fr);
+                column-count: 2;
                 column-gap: 24px;
             }
 
@@ -86,8 +85,7 @@
 
         /* 화면용 레이아웃 */
         .test-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+            column-count: 2;
             column-gap: 32px;
         }
 
@@ -269,12 +267,36 @@
             font-size: 0.95rem;
             color: #111827;
             min-height: 1.8rem;
+            margin-bottom: 8px;
+            break-inside: avoid;
+            -webkit-column-break-inside: avoid;
         }
 
         .test-word {
             min-width: 6rem;
             font-weight: 600;
             white-space: nowrap;
+        }
+
+        /* 정답지: 밑줄 위에 정답 표기 */
+        .answer-line--filled {
+            flex-grow: 1;
+            border-bottom: 1px solid #9ca3af;
+            margin-left: 0.5rem;
+            height: auto;
+            line-height: 1.35rem;
+            padding: 0 0.15rem 0.05rem 0.35rem;
+            color: #b91c1c;
+            font-weight: 600;
+            white-space: normal;
+            word-break: break-word;
+        }
+
+        /* 제목 미입력 시 빈 줄 */
+        .exam-title--blank .line-fill {
+            min-width: 12rem;
+            height: 1.5rem;
+            line-height: 1.5rem;
         }
 
         @media print {
@@ -331,6 +353,12 @@
             .test-cell {
                 min-height: 1.55rem;
                 font-size: 0.92rem;
+                margin-bottom: 5px;
+            }
+
+            .answer-line--filled {
+                line-height: 1.2rem;
+                padding-bottom: 0.02rem;
             }
         }
 
@@ -430,8 +458,18 @@
                 </div>
             </div>
 
-            <!-- 반 이름 / 커트라인 -->
+            <!-- 시험지 제목 / 반 이름 / 커트라인 -->
             <div class="mt-4 grid md:grid-cols-3 gap-4">
+                <div>
+                    <label for="examTitle" class="block text-sm font-medium text-gray-700 mb-1">시험지 제목</label>
+                    <input
+                        type="text"
+                        id="examTitle"
+                        placeholder="예: 유니크보카 단어 테스트"
+                        class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                    <p class="mt-1 text-xs text-gray-400">비워 두면 제목 자리에 빈 줄이 표시됩니다.</p>
+                </div>
                 <div>
                     <label for="className" class="block text-sm font-medium text-gray-700 mb-1">Class Name (반 이름)</label>
                     <input
@@ -448,20 +486,9 @@
                         class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
                         <option value="">선택 안 함</option>
-                        <option value="0">0 (0개까지 오답 허용)</option>
-                        <option value="-1">-1 (1개까지 오답 허용)</option>
-                        <option value="-2">-2 (2개까지 오답 허용)</option>
-                        <option value="-3">-3 (3개까지 오답 허용)</option>
-                        <option value="-4">-4 (4개까지 오답 허용)</option>
-                        <option value="-5">-5 (5개까지 오답 허용)</option>
-                        <option value="-6">-6 (6개까지 오답 허용)</option>
-                        <option value="-7">-7 (7개까지 오답 허용)</option>
-                        <option value="-8">-8 (8개까지 오답 허용)</option>
-                        <option value="-9">-9 (9개까지 오답 허용)</option>
-                        <option value="-10">-10 (10개까지 오답 허용)</option>
                     </select>
                     <p class="mt-1 text-xs text-gray-400">
-                        예: -3이면 최대 3개까지 오답 허용, 0이면 한 문제도 틀리면 안 되는 기준입니다.
+                        오답 허용 개수를 0개~20개 중에서 선택하세요. (0개는 한 문제도 틀리면 안 되는 기준)
                     </p>
                 </div>
             </div>
@@ -525,12 +552,12 @@
         </section>
 
         <!-- 정답지 영역 -->
-        <section id="answerSheet" class="no-print mt-6 bg-white p-4 rounded-xl shadow-md">
-            <div class="flex items-center justify-between mb-2">
+        <section id="answerSheet" class="no-print print-area mt-6 bg-white p-6 rounded-xl shadow-md">
+            <div class="no-print flex items-center justify-between mb-4">
                 <h2 class="text-lg font-semibold text-gray-800">정답지 (미리보기용)</h2>
                 <p class="text-xs text-gray-400">※ 기본 인쇄에서는 포함되지 않습니다. "정답지 인쇄" 버튼을 사용하세요.</p>
             </div>
-            <div id="answerContent" class="text-sm text-gray-700 grid md:grid-cols-2 gap-x-8 gap-y-1"></div>
+            <div id="answerContent"></div>
         </section>
 
     </main>
@@ -572,9 +599,36 @@
         const scrollBottomButton = document.getElementById('scrollBottomButton');
         const chapterSelectContainer = document.getElementById('chapterSelectContainer');
 
-        /* Class Name / Cutline 요소 */
+        /* 제목 / Class Name / Cutline 요소 */
+        const examTitleInput = document.getElementById('examTitle');
         const classNameInput = document.getElementById('className');
         const cutLineSelect = document.getElementById('cutLine');
+
+        const DEFAULT_EXAM_TITLE = '유니크보카 단어 테스트';
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        /* 커트라인 옵션 0~20개 채우기 */
+        function populateCutLineOptions() {
+            if (!cutLineSelect) return;
+            const frag = document.createDocumentFragment();
+            for (let i = 0; i <= 20; i++) {
+                const opt = document.createElement('option');
+                opt.value = String(i);
+                opt.textContent = i === 0
+                    ? '0개 (오답 없이 만점 기준)'
+                    : `${i}개 (${i}개까지 오답 허용)`;
+                frag.appendChild(opt);
+            }
+            cutLineSelect.appendChild(frag);
+        }
 
         /* ===== CSV 파서 ===== */
         function parseCSV(csvText) {
@@ -947,15 +1001,9 @@
             return shuffled.slice(0, Math.min(wordCount, shuffled.length));
         }
 
-        function renderTestPaper(words) {
+        function buildExamPaperHtml(words, { withAnswers } = {}) {
             const testType = testTypeSelect.value;
             const showNumbering = showNumberingCheckbox.checked;
-
-            if (!words || !words.length) {
-                testPaper.innerHTML = '<div class="text-center text-gray-400 text-sm">출력할 문제가 없습니다.</div>';
-                answerContent.innerHTML = '';
-                return;
-            }
 
             /* 상단 요약 정보 */
             const chapterList = Array.from(new Set(words.map(w => w.Chapter)))
@@ -981,27 +1029,35 @@
             if (cutLineValue !== '') {
                 const n = parseInt(cutLineValue, 10);
                 if (!isNaN(n)) {
-                    const allowed = Math.abs(n);
                     if (n === 0) {
-                        cutLineDisplay = `컷트라인: 0 (오답 없이 만점 기준)`;
+                        cutLineDisplay = `컷트라인: 0개 (오답 없이 만점 기준)`;
                     } else {
-                        cutLineDisplay = `컷트라인: ${n} (최대 ${allowed}개까지 오답 허용)`;
+                        cutLineDisplay = `컷트라인: ${n}개 (최대 ${n}개까지 오답 허용)`;
                     }
-                } else {
-                    cutLineDisplay = `컷트라인: ${cutLineValue}`;
                 }
             }
+
+            // ✅ 사용자 지정 제목 (비어 있으면 빈 줄 표시)
+            const examTitle = examTitleInput ? examTitleInput.value.trim() : '';
+            const titleHtml = examTitle
+                ? `<div class="exam-title">${escapeHtml(examTitle)}</div>`
+                : `<div class="exam-title exam-title--blank"><span class="line-fill"></span></div>`;
+
+            // 정답지 표식
+            const answerBadge = withAnswers
+                ? `<span class="ml-2 align-middle text-xs font-bold text-red-600">[정답]</span>`
+                : '';
 
             const headerHtml = `
                 <div class="exam-header-card">
                     <div class="exam-header-top">
                         <div>
-                            <div class="exam-badge">목동유쌤영어학원</div>
-                            <div class="exam-title">유니크보카 단어 테스트</div>
+                            <div class="exam-badge">목동유쌤영어학원${answerBadge}</div>
+                            ${titleHtml}
                             <div class="exam-subtitle">
                                 반 이름:
                                 ${className
-                                    ? `<span class="font-semibold text-gray-900">${className}</span>`
+                                    ? `<span class="font-semibold text-gray-900">${escapeHtml(className)}</span>`
                                     : `<span class="inline-write-line w-32"></span>`}
                                 ${cutLineDisplay
                                     ? `&nbsp;&nbsp;·&nbsp;&nbsp;<span class="font-semibold text-gray-900">${cutLineDisplay}</span>`
@@ -1032,23 +1088,16 @@
                             <div class="exam-meta-label">채점 결과</div>
                             <div class="exam-meta-value">○ Pass &nbsp;&nbsp;&nbsp; ○ Fail</div>
                         </div>
-                        <div class="exam-meta-item">
+                        <div class="exam-meta-item" style="grid-column: 1 / -1;">
                             <div class="exam-meta-label">재시험일</div>
-                            <div class="exam-meta-value"><span class="line-fill"></span></div>
-                        </div>
-                        <div class="exam-meta-item">
-                            <div class="exam-meta-label">파일명</div>
                             <div class="exam-meta-value"><span class="line-fill"></span></div>
                         </div>
                     </div>
                 </div>
             `;
 
-            /* 문제 & 정답 생성 */
-            const testCells = [];
-            const answers = [];
-
-            words.forEach((item, index) => {
+            /* 문제 셀 생성 (위→아래, 좌→우 순서는 CSS column-count로 처리) */
+            const testCells = words.map((item, index) => {
                 const number = index + 1;
                 const word = item.Word;
                 const meaning = item.Meaning;
@@ -1058,52 +1107,49 @@
 
                 if (testType === 'word-to-meaning') {
                     questionText = word;
-                    answerText = `${number}. ${word} → ${meaning}`;
+                    answerText = meaning;
                 } else if (testType === 'meaning-to-word') {
                     questionText = meaning;
-                    answerText = `${number}. ${meaning} → ${word}`;
+                    answerText = word;
                 } else if (testType === 'mixed') {
                     if (index % 2 === 0) {
                         questionText = word;
-                        answerText = `${number}. ${word} → ${meaning}`;
+                        answerText = meaning;
                     } else {
                         questionText = meaning;
-                        answerText = `${number}. ${meaning} → ${word}`;
+                        answerText = word;
                     }
                 }
 
-                const cellHtml = `
+                const answerLine = withAnswers
+                    ? `<span class="answer-line answer-line--filled">${escapeHtml(answerText)}</span>`
+                    : `<span class="answer-line"></span>`;
+
+                return `
                     <div class="test-cell question-block">
                         ${showNumbering ? `<span class="test-number">${number}.</span>` : ''}
-                        <span class="test-word">${questionText}</span>
-                        <span class="answer-line"></span>
+                        <span class="test-word">${escapeHtml(questionText)}</span>
+                        ${answerLine}
                     </div>
                 `;
-
-                testCells.push(cellHtml);
-                answers.push(answerText);
-            });
-
-            const mid = Math.ceil(testCells.length / 2);
-            const leftCells = testCells.slice(0, mid).join('');
-            const rightCells = testCells.slice(mid).join('');
+            }).join('');
 
             const gridHtml = `
-                <div class="question-zone"><div class="test-grid">
-                    <div class="test-col">
-                        ${leftCells}
-                    </div>
-                    <div class="test-col">
-                        ${rightCells}
-                    </div>
-                </div></div>
+                <div class="question-zone"><div class="test-grid">${testCells}</div></div>
             `;
 
-            testPaper.innerHTML = `<div class="exam-paper-shell">${headerHtml}${gridHtml}</div>`;
+            return `<div class="exam-paper-shell">${headerHtml}${gridHtml}</div>`;
+        }
 
-            answerContent.innerHTML = answers
-                .map(ans => `<div>${ans}</div>`)
-                .join('');
+        function renderTestPaper(words) {
+            if (!words || !words.length) {
+                testPaper.innerHTML = '<div class="text-center text-gray-400 text-sm">출력할 문제가 없습니다.</div>';
+                answerContent.innerHTML = '';
+                return;
+            }
+
+            testPaper.innerHTML = buildExamPaperHtml(words, { withAnswers: false });
+            answerContent.innerHTML = buildExamPaperHtml(words, { withAnswers: true });
         }
 
         function generateTestPaper() {
@@ -1178,6 +1224,11 @@
             displayStatus('옵션이 변경되었습니다. "테스트지 생성" 버튼을 눌러 새로 생성하세요.');
         });
 
+        if (examTitleInput) {
+            examTitleInput.addEventListener('input', () => {
+                displayStatus('옵션이 변경되었습니다. "테스트지 생성" 버튼을 눌러 새로 생성하세요.');
+            });
+        }
         if (classNameInput) {
             classNameInput.addEventListener('input', () => {
                 displayStatus('옵션이 변경되었습니다. "테스트지 생성" 버튼을 눌러 새로 생성하세요.');
@@ -1190,6 +1241,7 @@
         }
 
         window.addEventListener('DOMContentLoaded', () => {
+            populateCutLineOptions();
             loadData();
         });
     </script>
