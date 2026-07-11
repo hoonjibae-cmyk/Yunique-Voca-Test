@@ -67,7 +67,8 @@
             }
 
             .test-number {
-                width: 1.8rem;
+                flex: 0 0 2rem;
+                width: 2rem;
             }
 
             .test-word {
@@ -103,7 +104,10 @@
         }
 
         .test-number {
-            width: 1.8rem;
+            /* 번호 칸 고정 폭: flex-shrink로 줄어들지 않게 해 모든 단어 시작 위치를 통일한다.
+               (좁은 A4 단에서 긴 단어/뜻이 번호 칸을 눌러 단어가 왼쪽으로 당겨지던 문제 해결) */
+            flex: 0 0 2rem;
+            width: 2rem;
             font-weight: 500;
         }
 
@@ -127,7 +131,7 @@
         }
 
         .exam-header-card {
-            border: 2px solid #111827;
+            border: 1px solid #111827;
             padding: 1rem 1rem 0.875rem 1rem;
             margin-bottom: 1rem;
         }
@@ -146,15 +150,18 @@
             font-size: 0.68rem;
             font-weight: 700;
             letter-spacing: 0.08em;
-            margin-bottom: 0.55rem;
+            margin-bottom: 0;
+            align-self: flex-start;
         }
 
+        /* 제목: 이름란과 같은 줄에서 경쟁하지 않도록 카드 전체 폭을 사용 → 불필요한 줄바꿈 방지 */
         .exam-title {
-            font-size: 1.55rem;
+            margin-top: 0.55rem;
+            font-size: 1.5rem;
             font-weight: 800;
             letter-spacing: 0.01em;
             color: #111827;
-            line-height: 1.2;
+            line-height: 1.25;
         }
 
         .exam-subtitle {
@@ -249,7 +256,7 @@
         }
 
         .question-zone {
-            border-top: 2px solid #111827;
+            border-top: 1px solid #111827;
             padding-top: 0.9rem;
         }
 
@@ -289,6 +296,8 @@
         .answer-line--filled,
         .answer-line--ghost {
             flex-grow: 1;
+            flex-shrink: 1;
+            min-width: 0;        /* 좁은 단에서 번호 칸 대신 답란이 줄어들도록 */
             border-bottom: 1px solid #9ca3af;
             margin-left: 0.5rem;
             height: auto;
@@ -317,13 +326,14 @@
             }
 
             .exam-header-card {
-                border-width: 1.6px;
+                border-width: 1px;
                 margin-bottom: 0.75rem;
                 padding: 0.85rem 0.85rem 0.75rem 0.85rem;
             }
 
             .exam-title {
-                font-size: 1.35rem;
+                font-size: 1.3rem;
+                margin-top: 0.45rem;
             }
 
             .exam-subtitle {
@@ -1091,25 +1101,24 @@
             const headerHtml = `
                 <div class="exam-header-card">
                     <div class="exam-header-top">
-                        <div>
-                            <div class="exam-badge">목동유쌤영어학원${answerBadge}</div>
-                            ${titleHtml}
-                            <div class="exam-subtitle">
-                                반 이름:
-                                ${className
-                                    ? `<span class="font-semibold text-gray-900">${escapeHtml(className)}</span>`
-                                    : `<span class="inline-write-line w-32"></span>`}
-                                ${cutLineDisplay
-                                    ? `&nbsp;&nbsp;·&nbsp;&nbsp;<span class="font-semibold text-gray-900">${cutLineDisplay}</span>`
-                                    : ''}
-                            </div>
-                        </div>
+                        <div class="exam-badge">목동유쌤영어학원${answerBadge}</div>
                         <div class="exam-name-box shrink-0">
                             <div class="exam-name-line">
                                 <span class="font-semibold">이름</span>
                                 <span class="line-fill"></span>
                             </div>
                         </div>
+                    </div>
+
+                    ${titleHtml}
+                    <div class="exam-subtitle">
+                        반 이름:
+                        ${className
+                            ? `<span class="font-semibold text-gray-900">${escapeHtml(className)}</span>`
+                            : `<span class="inline-write-line w-32"></span>`}
+                        ${cutLineDisplay
+                            ? `&nbsp;&nbsp;·&nbsp;&nbsp;<span class="font-semibold text-gray-900">${cutLineDisplay}</span>`
+                            : ''}
                     </div>
 
                     <div class="exam-info-strip">
