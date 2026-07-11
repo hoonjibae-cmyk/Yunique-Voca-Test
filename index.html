@@ -425,17 +425,17 @@
     <main class="max-w-6xl mx-auto px-4 py-6">
 
         <!-- 설정/제어 패널 -->
-        <div class="controls w-full max-w-4xl bg-white rounded-2xl shadow-lg border border-gray-200 mb-6 sticky top-4 z-20 overflow-hidden">
+        <div class="controls w-full bg-white rounded-2xl shadow-lg border border-gray-200 mb-6 overflow-hidden">
             <!-- 패널 헤더 -->
-            <div class="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4">
-                <h1 class="text-xl font-bold text-white">단어 테스트지 생성 옵션</h1>
+            <div class="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3">
+                <h1 class="text-lg font-bold text-white">단어 테스트지 생성 옵션</h1>
                 <p class="mt-0.5 text-xs text-blue-100">챕터·유형·문항을 선택하고 시험지 정보를 입력한 뒤 <span class="font-semibold">테스트지 생성</span>을 누르세요.</p>
             </div>
 
-            <div class="p-6 space-y-6">
+            <div class="p-5 space-y-4">
                 <!-- 섹션 1: 출제 범위 -->
                 <section>
-                    <div class="flex items-center gap-2 mb-3">
+                    <div class="flex items-center gap-2 mb-2">
                         <span class="text-xs font-semibold uppercase tracking-wider text-blue-600">1 · 출제 범위</span>
                         <span class="flex-1 border-t border-gray-100"></span>
                     </div>
@@ -505,13 +505,13 @@
 
                 <!-- 섹션 2: 시험지 정보 -->
                 <section>
-                    <div class="flex items-center gap-2 mb-3">
+                    <div class="flex items-center gap-2 mb-2">
                         <span class="text-xs font-semibold uppercase tracking-wider text-blue-600">2 · 시험지 정보</span>
                         <span class="flex-1 border-t border-gray-100"></span>
                     </div>
-                    <div class="space-y-4">
-                        <!-- 시험지 제목 (전체 폭) -->
-                        <div>
+                    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-3">
+                        <!-- 시험지 제목 (2칸 폭) -->
+                        <div class="lg:col-span-2">
                             <label for="examTitle" class="block text-sm font-medium text-gray-700 mb-1">시험지 제목</label>
                             <input
                                 type="text"
@@ -521,34 +521,32 @@
                             >
                             <p class="mt-1 text-xs text-gray-400">예: 7/6(7) 월(화)_블루라벨반_유니크보카 DAY 1-3_커트 -3_홍길동T</p>
                         </div>
-                        <div class="grid sm:grid-cols-2 gap-4">
-                            <div>
-                                <label for="className" class="block text-sm font-medium text-gray-700 mb-1">반 이름 <span class="text-gray-400 font-normal">(Class Name)</span></label>
-                                <input
-                                    type="text"
-                                    id="className"
-                                    placeholder="예: M3 Prime / M5S 등"
-                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                >
-                            </div>
-                            <div>
-                                <label for="cutLine" class="block text-sm font-medium text-gray-700 mb-1">커트라인 <span class="text-gray-400 font-normal">(Cutline)</span></label>
-                                <select
-                                    id="cutLine"
-                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm shadow-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                >
-                                    <option value="">선택 안 함</option>
-                                </select>
-                                <p class="mt-1 text-xs text-gray-400">
-                                    오답 허용 개수 0~20개 중 선택 (0개 = 만점 기준)
-                                </p>
-                            </div>
+                        <div>
+                            <label for="className" class="block text-sm font-medium text-gray-700 mb-1">반 이름 <span class="text-gray-400 font-normal">(Class Name)</span></label>
+                            <input
+                                type="text"
+                                id="className"
+                                placeholder="예: M3 Prime / M5S 등"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            >
+                        </div>
+                        <div>
+                            <label for="cutLine" class="block text-sm font-medium text-gray-700 mb-1">커트라인 <span class="text-gray-400 font-normal">(Cutline)</span></label>
+                            <select
+                                id="cutLine"
+                                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm shadow-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            >
+                                <option value="">선택 안 함</option>
+                            </select>
+                            <p class="mt-1 text-xs text-gray-400">
+                                오답 허용 개수 0~20개 중 선택 (0개 = 만점)
+                            </p>
                         </div>
                     </div>
                 </section>
 
                 <!-- 섹션 3: 표시 옵션 & 실행 -->
-                <section class="border-t border-gray-100 pt-5">
+                <section class="border-t border-gray-100 pt-3">
                     <div class="flex flex-wrap items-center justify-between gap-4">
                         <label class="inline-flex items-center gap-2 cursor-pointer select-none">
                             <input type="checkbox" id="showNumbering" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" checked>
