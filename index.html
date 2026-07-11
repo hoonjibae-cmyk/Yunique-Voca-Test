@@ -274,6 +274,8 @@
             margin-bottom: 8px;
             break-inside: avoid;
             -webkit-column-break-inside: avoid;
+            /* 영어 시험지 느낌의 세리프 폰트 */
+            font-family: 'Times New Roman', Times, Georgia, serif;
         }
 
         .test-word {
@@ -282,19 +284,23 @@
             white-space: nowrap;
         }
 
-        /* 정답지: 밑줄 위에 정답 표기 */
-        .answer-line--filled {
+        /* 시험지·정답지 공통 답란(밑줄).
+           배열 일치를 위해 시험지 빈 칸도 정답 높이만큼 공간을 확보(투명 텍스트)한다. */
+        .answer-line--filled,
+        .answer-line--ghost {
             flex-grow: 1;
             border-bottom: 1px solid #9ca3af;
             margin-left: 0.5rem;
             height: auto;
             line-height: 1.35rem;
             padding: 0 0.15rem 0.05rem 0.35rem;
-            color: #b91c1c;
             font-weight: 600;
             white-space: normal;
             word-break: break-word;
         }
+
+        .answer-line--filled { color: #b91c1c; }   /* 정답지: 빨간 정답 표기 */
+        .answer-line--ghost  { color: transparent; } /* 시험지: 공간만 확보(빈 줄) */
 
         /* 제목 미입력 시 빈 줄 */
         .exam-title--blank .line-fill {
@@ -364,9 +370,17 @@
                 margin-bottom: 5px;
             }
 
-            .answer-line--filled {
+            .answer-line--filled,
+            .answer-line--ghost {
                 line-height: 1.2rem;
                 padding-bottom: 0.02rem;
+            }
+
+            /* 시험지·정답지 인쇄 시작 위치를 동일하게 맞춰 배열 일치 보장 */
+            #testPaper,
+            #answerSheet {
+                margin: 0 !important;
+                padding: 0 !important;
             }
         }
 
@@ -1147,9 +1161,10 @@
                     }
                 }
 
-                const answerLine = withAnswers
-                    ? `<span class="answer-line answer-line--filled">${escapeHtml(answerText)}</span>`
-                    : `<span class="answer-line"></span>`;
+                // 시험지(ghost)와 정답지(filled) 모두 동일한 정답 텍스트로 높이를 확보한다.
+                // → 두 문서의 셀 높이가 같아져 열·페이지 분할(배열)이 완전히 일치한다.
+                const answerLineClass = withAnswers ? 'answer-line--filled' : 'answer-line--ghost';
+                const answerLine = `<span class="answer-line ${answerLineClass}">${escapeHtml(answerText)}</span>`;
 
                 return `
                     <div class="test-cell question-block">
